@@ -1,31 +1,40 @@
 # Rapsometeddy HQ Bot
 
-A lightweight Telegram community bot for Rapsometeddy HQ.
+Telegram community bot for Rapsometeddy HQ.
 
 ## Features
-- `/start`, `/help`, `/rules`, `/about`
-- `/id` to show the current chat ID
-- `/announce <message>` for admins
-- `/pin` to pin the replied-to message (admins)
-- `/warn` and `/unwarn` (admins)
-- `/mute` and `/unmute` (admins)
-- `/ban` and `/unban` (admins)
-- `/welcome on|off`
-- `/setrules <text>`
-- Basic link/spam filtering
-- Webhook endpoint for Vercel
+- /start, /help, /rules, /about, /id
+- Admin announcements
+- Pin messages
+- Warn/unwarn
+- Mute/unmute
+- Ban/unban
+- Welcome messages
+- Custom rules
+- Basic link filtering
+- Vercel serverless webhook
 
-## Deploy
-1. Create a bot with Telegram's @BotFather and keep the token secret.
-2. Push this repository to GitHub.
-3. Import the repository into Vercel.
-4. Add environment variable `BOT_TOKEN`.
-5. Deploy.
-6. Set Telegram webhook to:
-   `https://YOUR-VERCEL-DOMAIN/api/webhook?token=YOUR_WEBHOOK_SECRET`
-   using the Telegram Bot API `setWebhook`.
-7. Add the bot to your Rapsometeddy HQ discussion group as an administrator.
-8. If you also want the bot to publish announcements to your channel, add it as an administrator in the channel with permission to post.
+## Environment variables
 
-## Security
-Never commit `BOT_TOKEN` or your webhook secret to GitHub.
+Add these in Vercel **Production**:
+
+- BOT_TOKEN — Telegram bot token from BotFather
+- WEBHOOK_SECRET — private random string used to protect the webhook
+- CHANNEL_ID — optional numeric Telegram channel ID. If set, /announce publishes there.
+
+Never put BOT_TOKEN or WEBHOOK_SECRET in GitHub.
+
+## Telegram setup
+
+1. Add the bot to your group as an administrator.
+2. Give it permission to delete messages, restrict members, ban users and pin messages.
+3. Add the bot to the channel as an administrator with permission to post.
+4. Set the Telegram webhook to:
+
+https://YOUR-VERCEL-DOMAIN.vercel.app/api/webhook?token=YOUR-WEBHOOK-SECRET
+
+5. Test /start, /help and /id.
+
+## Important
+
+The current V1 keeps welcome/rules settings in memory. Vercel serverless instances can restart, so these settings are not permanent yet. A later V2 can add a database for persistent settings and warning counts.
