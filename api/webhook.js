@@ -370,6 +370,20 @@ Use /help to see what the bot can do.`);
   if (!text) return;
 
   if (/^\/start(?:@\w+)?\b/i.test(text)) {
+    if (chat.type === "private") {
+      return send(chat.id, `🧸 Welcome to Rapsometeddy Content Machine!
+
+Turn one business idea into ready-to-post content.
+
+Try:
+• /create Weekend haircut special
+• /idea restaurant lunch promotion
+• /auto new clothing drop
+• /drafts
+
+Use /help for your client controls.`);
+    }
+
     return send(chat.id, `🧸 Welcome to Rapsometeddy HQ!
 
 A community for:
@@ -379,13 +393,31 @@ A community for:
 🎵 Music
 🤝 Networking
 
-Use /help to see what I can do.`);
+Use /help to see the HQ controls.`);
   }
 
   if (/^\/help(?:@\w+)?\b/i.test(text)) {
+    if (chat.type === "private") {
+      return send(chat.id, `🧸 Rapsometeddy Content Machine
+
+Your client workspace — right here in Telegram.
+
+Create:
+/create <idea> — create a content draft
+/idea <topic> — generate 5 content ideas
+/auto <topic> — generate a full content package
+/drafts — view your saved drafts
+/approve <id> — approve a draft
+/queue <id> — queue a draft
+/publish <id> — publish approved content
+/adapt <id> <x|instagram|telegram> — adapt a draft
+
+Need help? Message @RapsometeddyHQBot and we’ll help you get started.`);
+    }
+
     return send(chat.id, `🧸 Rapsometeddy HQ Bot
 
-Member:
+HQ / Community:
 /rules — community rules
 /about — about HQ
 /id — show chat ID
@@ -406,17 +438,7 @@ Content Machine:
 /publish <id> — publish a draft now
 /published <id> — same as /publish
 
-Admin:
-/announce <text> — publish to the HQ channel
-/pin — pin the replied-to message
-/warn — warn a replied-to user
-/unwarn — remove a warning
-/mute — mute a replied-to user for 1 hour
-/unmute — unmute a replied-to user
-/ban — ban a replied-to user
-/unban — unban a replied-to user
-/welcome on|off — toggle welcomes
-/setrules <text> — replace the current rules`);
+Admin commands are restricted to Telegram admins.`);
   }
 
   if (/^\/rules(?:@\w+)?\b/i.test(text)) return send(chat.id, currentRules);
