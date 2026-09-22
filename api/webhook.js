@@ -10,13 +10,11 @@ const API = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : "";
 
 async function tg(method, body = {}) {
   if (!BOT_TOKEN) return { ok: false, description: "BOT_TOKEN missing" };
-
   const r = await fetch(`${API}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
-
   return r.json();
 }
 
@@ -75,10 +73,10 @@ async function listDrafts(chatId, limit = 10) {
   return (await dbRequest(`content_drafts?chat_id=eq.${encodeURIComponent(chatId)}&order=id.desc&limit=${limit}&select=*`)) || [];
 }
 
-async function getDraft(chatId, number) {
+async function getDraft(chatId, id) {
   if (!dbEnabled()) return null;
-  const rows = await dbRequest(`content_drafts?chat_id=eq.${encodeURIComponent(chatId)}&order=id.asc&limit=100&select=*`);
-  return rows?.[number - 1] || null;
+  const rows = await dbRequest(`content_drafts?chat_id=eq.${encodeURIComponent(chatId)}&id=eq.${encodeURIComponent(id)}&limit=1&select=*`);
+  return rows?.[0] || null;
 }
 
 async function setDraftStatus(id, status) {
@@ -170,14 +168,16 @@ Member:
 
 Content Machine:
 /content — Content Machine help
+/idea — generate 5 content ideas
+/ideas — same as /idea
 /create <idea> — create a post draft
 /thread <idea> — create a thread draft
 /short <idea> — create a short-video script
-/ideas — content ideas
-/drafts — list drafts
-/approve <number> — approve
-/queue <number> — queue
-/published <number> — publish now
+/drafts — list saved drafts
+/approve <id> — approve a draft
+/queue <id> — queue a draft
+/publish <id> — publish a draft now
+/published <id> — same as /publish
 
 Admin:
 /announce <text> — publish to the HQ channel
@@ -283,14 +283,14 @@ ${rest}`;
   if (/^\/content(?:@\w+)?\b/i.test(text)) {
     return send(chat.id, `🧸 Content Machine
 
+/idea — generate 5 ideas
 /create <idea> — create a post draft
 /thread <idea> — create a thread draft
 /short <idea> — create a short-video script
-/ideas — get content ideas
-/drafts — show drafts for this bot session
-/approve <number> — approve a draft
-/queue <number> — queue a draft
-/published <number> — mark it published`);
+/drafts — show saved drafts
+/approve <id> — approve a draft
+/queue <id> — queue a draft
+/publish <id> — publish a draft now`);
   }
 
   function contentDraft(idea, format) {
@@ -318,32 +318,28 @@ CTA: Save this and follow Rapsometeddy for more.`,
 20–25s: Call to action`
     };
     const template = templates[format];
-    return typeof template === "function" ? template(idea) : `HOOK: ${idea}
-
-Here is the simple version:
-• What it is
-• Why it matters
-• One practical way to start
-
-CTA: Save this and follow Rapsometeddy for more.`;
+    return typeof template === "function" ? template(idea) : templates.post(idea);
   }
 
-  const contentCmd = /^(\/create|\/thread|\/short|\/ideas|\/drafts|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
+  const contentCmd = /^(\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
   if (contentCmd) {
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
 
-    if (cmd === "/ideas") {
-      return send(chat.id, `💡 Content ideas
+    if (cmd === "/idea" || cmd === "/ideas") {
+      return send(chat.id, `💡 Rapsometeddy content ideas
 
-1. 5 useful AI tools for students
-2. How to build an app using only a phone
-3. GitHub basics for beginners
-4. Realistic online business ideas
-5. AI + music for independent creators
-6. What I learned building Rapsometeddy HQ
-7. How to automate a Telegram community
-8. Free tools every new creator should know`);
+1. 🎵 AI + music for independent creators
+2. 🤖 5 useful AI tools for students
+3. 📱 How to build an app using only a phone
+4. 💼 Realistic online business ideas in South Africa
+5. 👨‍💻 GitHub basics for beginners
+6. 📲 How to automate a Telegram community
+7. 🚀 What I learned building Rapsometeddy HQ
+8. 🎌 Anime-inspired creativity and storytelling
+
+Pick one and run:
+ /create <idea>`);
     }
 
     if (cmd === "/create" || cmd === "/thread" || cmd === "/short") {
@@ -354,12 +350,14 @@ CTA: Save this and follow Rapsometeddy for more.`;
       if (dbEnabled()) {
         const saved = await saveDraft(chat.id, user?.id, format, rest, draftContent);
         if (!saved) return send(chat.id, "⚠️ I couldn't save that draft. Check the Content Machine database setup.");
-        return send(chat.id, `📝 Draft #${saved.id} created and saved permanently.
+        return send(chat.id, `📝 Draft #${saved.id} created and saved.
 
 ${draftContent}
 
 Status: Draft
-Use /approve ${saved.id}, /queue ${saved.id}, or /publish ${saved.id}.`);
+/approve ${saved.id} → approve
+/queue ${saved.id} → queue
+/publish ${saved.id} → publish`);
       }
 
       return send(chat.id, `📝 Draft created, but persistent storage is not connected yet.
@@ -379,17 +377,20 @@ ${draftContent}
     if (["/approve", "/queue", "/publish", "/published"].includes(cmd)) {
       if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
       const match = rest.match(/^(\d+)/);
-      if (!match) return send(chat.id, `Usage: ${cmd} <draft number>`);
+      if (!match) return send(chat.id, `Usage: ${cmd} <draft id>`);
       const id = Number(match[1]);
-      const status = cmd === "/approve" ? "Approved" : cmd === "/queue" ? "Queued" : "Published";
       const draft = await getDraft(chat.id, id);
       if (!draft) return send(chat.id, "❌ Draft not found.");
-      
-      if (status === "Published") {
+
+      if (cmd === "/publish" || cmd === "/published") {
+        if (draft.status !== "Approved" && draft.status !== "Queued") {
+          return send(chat.id, `⚠️ Draft #${id} is currently ${draft.status}. Approve it first with /approve ${id}.`);
+        }
         const r = await publishDraft(chat.id, draft);
         return send(chat.id, r.ok ? `🚀 Draft #${id} published.` : `❌ Could not publish: ${r.description || "unknown Telegram error"}`);
       }
 
+      const status = cmd === "/approve" ? "Approved" : "Queued";
       const ok = await setDraftStatus(draft.id, status);
       return send(chat.id, ok ? `✅ Draft #${id} marked ${status}.` : "❌ Could not update that draft.");
     }
@@ -425,7 +426,6 @@ module.exports = async (req, res) => {
     }
 
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
-
     if (req.query?.token !== WEBHOOK_SECRET) return res.status(401).json({ ok: false, error: "unauthorized" });
 
     await handleMessage(req.body?.message || req.body?.channel_post || {});
