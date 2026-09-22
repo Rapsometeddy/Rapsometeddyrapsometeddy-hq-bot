@@ -448,143 +448,110 @@ Published: ${counts.Published || 0}`);
     ];
   }
 
-  function contentDraft(idea, format) {
-    const facts = topicFacts(idea);
-    const templates = {
-      post: (value) => `🔥 ${value}
+  function detectContentType(idea) {
+    const v = idea.toLowerCase();
+    if (v.includes("3 mistakes") || v.includes("mistakes beginners")) return "mistakes";
+    if (v.includes("7-day challenge") || v.includes("challenge")) return "challenge";
+    if (v.includes("myth vs reality") || v.includes("myth")) return "myth";
+    if (v.includes("using only a phone") || v.includes("from a phone") || v.includes("phone-only")) return "phone";
+    if (v.includes("r0") || v.includes("no money") || v.includes("without money")) return "r0";
+    if (v.includes("how i would start") || v.includes("build") || v.includes("building")) return "build";
+    if (v.includes("what i learned") || v.includes("what nobody tells you")) return "lessons";
+    return "guide";
+  }
 
-Here are the 3 things I'd watch out for:
-
-1️⃣ ${facts[0]}
-2️⃣ ${facts[1]}
-3️⃣ ${facts[2]}
-
-💡 The fix: start with one small version, test it, learn from the result, then improve.
-
-🎯 You don't need a perfect setup. You need a working first step.
-
-#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship
-
-CTA: Save this for your next project.`,
-      thread: (value) => `🧵 ${value}
-
-1/ The biggest trap is trying to get everything right before you begin.
-
-2/ Mistake #1: ${facts[0]}
-
-3/ Mistake #2: ${facts[1]}
-
-4/ Mistake #3: ${facts[2]}
-
-5/ The better approach: build the smallest useful version, test it, then improve it.
-
-🎯 Build → test → learn → repeat.
-
-— Rapsometeddy`,
-      short: (value) => `🎬 SHORT VIDEO: ${value}
-
-0–3s — HOOK
-“Here are 3 mistakes beginners keep making.”
-
-3–8s — MISTAKE #1
-“${facts[0]}”
-
-8–13s — MISTAKE #2
-“${facts[1]}”
-
-13–18s — MISTAKE #3
-“${facts[2]}”
-
-18–25s — FIX
-“Start small, test the idea, then improve what actually works.”
-
-25–30s — CTA
-“Save this for your next project and follow Rapsometeddy.”`
-    };
-    const template = templates[format];
-    return typeof template === "function" ? template(idea) : templates.post(idea);
+  function contentFacts(idea) {
+    const v = idea.toLowerCase();
+    if (v.includes("ai app") && (v.includes("phone") || v.includes("mobile"))) return [
+      "Build one useful feature before attempting the whole app.",
+      "Choose a workflow you can realistically manage from a phone.",
+      "Prove the first version works before paying for APIs, hosting or subscriptions."
+    ];
+    if (v.includes("app") && (v.includes("phone") || v.includes("mobile"))) return [
+      "Start with one small problem instead of a huge feature list.",
+      "Keep the development workflow simple enough to manage from a phone.",
+      "Test the first version before spending money."
+    ];
+    if (v.includes("ai")) return [
+      "Choose one problem instead of trying every AI tool.",
+      "Test the idea before paying for more tools.",
+      "Check AI output instead of assuming it is useful."
+    ];
+    if (v.includes("music") || v.includes("song") || v.includes("rap")) return [
+      "Choose a clear creative direction before collecting more tools.",
+      "Finish songs instead of endlessly perfecting one track.",
+      "Give each release a memorable idea or identity."
+    ];
+    if (v.includes("business") || v.includes("money") || v.includes("entrepreneur")) return [
+      "Start with a real problem instead of a product idea.",
+      "Test demand before spending heavily.",
+      "Find a repeatable way to create value before scaling."
+    ];
+    return [
+      "Start with one small problem instead of trying to solve everything.",
+      "Use the simplest workflow that can prove the idea.",
+      "Test early and let real results guide the next version."
+    ];
   }
 
   function contentPackage(idea) {
-    const facts = topicFacts(idea);
-    const core = contentDraft(idea, "post");
-    const ctas = [
-      "Save this for your next project.",
-      "What would you build with this?",
-      "Try one step today and see what happens.",
-      "Follow the build — more experiments coming.",
-      "What should Rapsometeddy build next?"
-    ];
-    const cta = ctas[Math.floor(Date.now() / 86400000) % ctas.length];
+    const type = detectContentType(idea);
+    const facts = contentFacts(idea);
+    const cta = ["Save this for your next project.","What would you build with this?","Try one step today.","Follow the build — more experiments coming.","What should Rapsometeddy build next?"][Math.floor(Date.now() / 86400000) % 5];
 
-    return `🧸 RAPSOMETTEDY CONTENT PACKAGE
+    if (type === "mistakes") {
+      return makePackage(
+        "🔥 " + idea + "\n\n3 mistakes beginners make:\n\n1️⃣ " + facts[0] + "\n2️⃣ " + facts[1] + "\n3️⃣ " + facts[2] + "\n\n💡 Fix: start small, test early, then improve what works.",
+        idea + "\n\n1. " + facts[0] + "\n2. " + facts[1] + "\n3. " + facts[2] + "\n\nBetter approach: build the smallest useful version, test it, then improve.\n\n" + cta + "\n\n— Rapsometeddy",
+        "❌ " + facts[0] + "\n❌ " + facts[1] + "\n❌ " + facts[2] + "\n\n✅ Start small. Test early. Learn. Improve.\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI",
+        "🧸 " + idea + "\n\n1️⃣ " + facts[0] + "\n2️⃣ " + facts[1] + "\n3️⃣ " + facts[2] + "\n\n💡 Start with one useful version and improve it.\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s HOOK: “Here are 3 mistakes beginners keep making.”\n\n3–8s #1: “" + facts[0] + "”\n8–13s #2: “" + facts[1] + "”\n13–18s #3: “" + facts[2] + "”\n18–25s FIX: “Start small, test, then improve.”\n25–30s CTA: “" + cta + "”"
+      );
+    }
 
-━━━━━━━━━━━━━━━━━━
-📝 MASTER POST
-━━━━━━━━━━━━━━━━━━
+    if (type === "phone") {
+      return makePackage(
+        "📱 " + idea + "\n\nThe goal isn't a massive app. It's proving a useful first version can be built with the device you already have.\n\n1️⃣ Pick one problem.\n2️⃣ Build one feature.\n3️⃣ Connect only what you need.\n4️⃣ Test it on your phone.\n5️⃣ Document what breaks.\n\n🎯 Ship a tiny working version before adding more features.",
+        "Can you build an AI project using only a phone?\n\nOne problem. One feature. One workflow.\n\nBuild → test → fix → repeat.\n\nThe constraint can become the experiment.\n\n— Rapsometeddy",
+        "📱 PHONE-ONLY BUILD EXPERIMENT\n\nPick one problem. Build one feature. Test it. Document failures. Improve the next version.\n\n" + cta + "\n\n#Rapsometeddy #PhoneOnly #AI #Tech",
+        "🧸 PHONE-ONLY EXPERIMENT\n\n📱 Pick one problem\n🛠️ Build one feature\n🧪 Test it\n📝 Document what breaks\n🔁 Improve it\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s HOOK: “Can I actually build this using only my phone?”\n3–8s GOAL: “One problem. One useful feature.”\n8–18s BUILD: “Build it. Test it. Find what breaks.”\n18–24s LESSON: “The first version needs to work, not be perfect.”\n24–30s CTA: “Follow Rapsometeddy for the experiment.”"
+      );
+    }
 
-${core}
+    if (type === "r0") {
+      return makePackage(
+        "💸 " + idea + "\n\nIf I had R0, I'd prove an idea before spending money.\n\n1️⃣ Use tools I already have.\n2️⃣ Pick one real problem.\n3️⃣ Build the smallest useful version.\n4️⃣ Test it.\n5️⃣ Spend only when the next expense has a clear purpose.\n\n🎯 R0 means using time and attention as the first resources.",
+        "Starting with R0?\n\nDon't start by buying tools.\nStart with a real problem, simple solution, free workflow and real test.\n\nThen spend only when the result justifies it.\n\n— Rapsometeddy",
+        "💸 THE R0 BUILD\n\nUse what you already have. Solve one problem. Build the smallest version. Test it. Then decide what deserves money.\n\n" + cta + "\n\n#Rapsometeddy #R0 #BuildInPublic #Entrepreneurship",
+        "🧸 R0 BUILD PLAN\n\n💡 One real problem\n🛠️ One simple solution\n📱 Tools you already have\n🧪 One real test\n\nLet the result decide the next step.\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s HOOK: “If I had R0, this is where I'd start.”\n3–10s: “Find one real problem.”\n10–16s: “Build the smallest solution with what you have.”\n16–22s: “Test it before spending money.”\n22–30s CTA: “Follow Rapsometeddy for the R0 build.”"
+      );
+    }
 
-━━━━━━━━━━━━━━━━━━
-🐦 X VERSION
-━━━━━━━━━━━━━━━━━━
+    if (type === "challenge") {
+      return makePackage(
+        "🔥 " + idea + "\n\nDAY 1 — Pick one problem.\nDAY 2 — Plan the simplest solution.\nDAY 3 — Build.\nDAY 4 — Test.\nDAY 5 — Fix the biggest problem.\nDAY 6 — Share what you learned.\nDAY 7 — Decide what to build next.\n\n🎯 The goal is a finished experiment, not perfection.",
+        "7-day challenge:\n\nDay 1 problem → Day 2 plan → Day 3 build → Day 4 test → Day 5 fix → Day 6 share → Day 7 reflect.\n\nSeven days of building beats seven days of waiting.\n\n— Rapsometeddy",
+        "🔥 7-DAY BUILD CHALLENGE\n\nProblem → Plan → Build → Test → Fix → Share → Reflect.\n\nFinish the experiment.\n\n" + cta + "\n\n#Rapsometeddy #7DayChallenge #BuildInPublic",
+        "🧸 7-DAY BUILD CHALLENGE\n\n1️⃣ Problem\n2️⃣ Plan\n3️⃣ Build\n4️⃣ Test\n5️⃣ Fix\n6️⃣ Share\n7️⃣ Reflect\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s: “Give me 7 days and one idea.”\n3–18s: “Problem. Plan. Build. Test. Fix. Share.”\n18–24s: “Day 7: decide what the results taught you.”\n24–30s: “Join the challenge and follow Rapsometeddy.”"
+      );
+    }
 
-${idea}
+    const master = "💡 " + idea + "\n\nStart with one small problem.\nUse the simplest useful workflow.\nTest the first version.\nLearn from what happens.\nImprove the next version.\n\n🎯 Build something real before trying to make it perfect.";
+    return makePackage(master, idea + "\n\nStart small. Test early. Learn from real results. Improve the next version.\n\nBuild → test → learn → repeat.\n\n— Rapsometeddy", "Keep the first version simple.\n\n1. Start small.\n2. Test early.\n3. Learn from feedback.\n4. Improve the next version.\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI", "🧸 " + idea + "\n\n💡 Start small\n🧪 Test early\n📚 Learn\n🔁 Improve\n\nBuild • Learn • Create • Invest 🚀", "0–3s: “Here's the simple way I'd approach this.”\n3–10s: “Start with one small problem.”\n10–18s: “Build and test the first useful version.”\n18–24s: “Let real results guide the next version.”\n24–30s: “Follow Rapsometeddy for the build.”");
+  }
 
-3 things beginners get wrong:
+  function makePackage(master, xVersion, instagram, telegram, short) {
+    return "🧸 RAPSOMETTEDY CONTENT PACKAGE\n\n━━━━━━━━━━━━━━━━━━\n📝 MASTER POST\n━━━━━━━━━━━━━━━━━━\n\n" + master + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship\n\n━━━━━━━━━━━━━━━━━━\n🐦 X VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + xVersion + "\n\n━━━━━━━━━━━━━━━━━━\n📸 INSTAGRAM VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + instagram + "\n\n━━━━━━━━━━━━━━━━━━\n💬 TELEGRAM VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + telegram + "\n\n━━━━━━━━━━━━━━━━━━\n🎬 SHORT VIDEO\n━━━━━━━━━━━━━━━━━━\n\n" + short;
+  }
 
-1. ${facts[0]}
-2. ${facts[1]}
-3. ${facts[2]}
-
-Better approach: build the smallest useful version, test it, then improve.
-
-${cta}
-
-— Rapsometeddy
-
-━━━━━━━━━━━━━━━━━━
-📸 INSTAGRAM VERSION
-━━━━━━━━━━━━━━━━━━
-
-${idea}
-
-The beginner trap is making the journey more complicated than it needs to be.
-
-❌ ${facts[0]}
-❌ ${facts[1]}
-❌ ${facts[2]}
-
-✅ Start small.
-✅ Test early.
-✅ Learn from real feedback.
-✅ Improve the next version.
-
-${cta}
-
-#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship #Creator
-
-━━━━━━━━━━━━━━━━━━
-💬 TELEGRAM VERSION
-━━━━━━━━━━━━━━━━━━
-
-🧸 ${idea}
-
-The 3 traps:
-
-1️⃣ ${facts[0]}
-2️⃣ ${facts[1]}
-3️⃣ ${facts[2]}
-
-💡 Simple fix: start with one useful version and improve it from there.
-
-Build • Learn • Create • Invest 🚀
-
-━━━━━━━━━━━━━━━━━━
-🎬 SHORT VIDEO
-━━━━━━━━━━━━━━━━━━
-
-${contentDraft(idea, "short")}`;
+  function contentDraft(idea, format) {
+    const packageText = contentPackage(idea);
+    if (format === "post") return packageText;
+    if (format === "short") return "🎬 SHORT VIDEO: " + idea + "\n\nBuild a small version. Test it. Learn from what breaks. Improve the next version.\n\nCTA: Follow Rapsometeddy for the build.";
+    return packageText;
   }
 
   const contentCmd = /^(\/auto|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
