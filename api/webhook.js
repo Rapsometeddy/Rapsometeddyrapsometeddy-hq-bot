@@ -79,6 +79,53 @@ async function sendMediaAudio(chatId, url, caption = "") {
   });
 }
 
+async function renderSlideshow(imageUrls, audioUrl, outputPath) {
+  const fs = require("fs"), os = require("os"), path = require("path");
+  const { spawn } = require("child_process");
+  const ffmpegPath = require("ffmpeg-static");
+  if (!ffmpegPath) throw new Error("FFmpeg binary unavailable");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rapsometeddy-media-"));
+  const imagePaths = [];
+  for (let i = 0; i < imageUrls.length; i++) {
+    const r = await fetch(imageUrls[i]);
+    if (!r.ok) throw new Error("Could not download image " + (i + 1));
+    const p = path.join(dir, "scene-" + String(i).padStart(2, "0") + ".jpg");
+    fs.writeFileSync(p, Buffer.from(await r.arrayBuffer()));
+    imagePaths.push(p);
+  }
+  const ar = await fetch(audioUrl);
+  if (!ar.ok) throw new Error("Could not download voiceover");
+  const audioPath = path.join(dir, "voiceover.mp3");
+  fs.writeFileSync(audioPath, Buffer.from(await ar.arrayBuffer()));
+  const listPath = path.join(dir, "images.txt");
+  const concat = imagePaths.map(p => "file '" + p.replace(/'/g, "'\\''") + "'\nduration 4").join("\n") +
+    "\nfile '" + imagePaths[imagePaths.length - 1].replace(/'/g, "'\\''") + "'";
+  fs.writeFileSync(listPath, concat);
+  await new Promise((resolve, reject) => {
+    const proc = spawn(ffmpegPath, [
+      "-y","-f","concat","-safe","0","-i",listPath,"-i",audioPath,
+      "-vf","scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
+      "-r","30","-c:v","libx264","-preset","veryfast","-crf","28",
+      "-c:a","aac","-b:a","128k","-shortest","-movflags","+faststart",outputPath
+    ]);
+    let stderr = "";
+    proc.stderr.on("data", d => { stderr += d.toString(); });
+    proc.on("error", reject);
+    proc.on("close", code => code === 0 ? resolve() : reject(new Error("FFmpeg failed: " + stderr.slice(-1200))));
+  });
+  return outputPath;
+}
+
+async function sendLocalVideo(chatId, filePath, caption = "") {
+  const fs = require("fs"), FormData = require("form-data");
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("video", fs.createReadStream(filePath), { filename:"rapsometeddy.mp4", contentType:"video/mp4" });
+  if (caption) form.append("caption", caption);
+  const r = await fetch(API + "/sendVideo", { method:"POST", headers:form.getHeaders(), body:form });
+  return r.json();
+}
+
 function pollinationsUrl(kind, prompt, params = {}) {
   const base = "https://gen.pollinations.ai/" + kind + "/" + encodeURIComponent(prompt);
   const q = new URLSearchParams(params);
@@ -769,40 +816,36 @@ Published: ${counts.Published || 0}`);
       const voiceText = "Can I build a useful AI app using only a phone? Day one: choose one real problem. Day two: design the smallest useful feature. Day three: build the first version. Day four: connect the AI. Day five: test it. Day six: fix what breaks. Day seven: share the result. Build, test, fix, share.";
       const audioUrl = pollinationsUrl("audio", voiceText, { voice: "nova" });
 
-      // Telegram can fetch media directly from a public HTTP URL. Send the
-      // generated Pollinations video/audio instead of exposing their URLs.
-      const videoSent = await sendMediaVideo(
-        chat.id,
-        videoUrl,
-        "🎥 Rapsometeddy generated video — draft #" + id
-      );
+      const audioSent = await sendMediaAudio(chat.id, audioUrl, "🎙️ Rapsometeddy voiceover");
+      const imageUrls = prompts.map(prompt => pollinationsUrl("image", prompt, {
+        model: "flux", width: "720", height: "1280",
+        nologo: "true", private: "true", safe: "true"
+      }));
 
-      if (!videoSent.ok) {
-        await send(chat.id,
-          "⚠️ The video was generated but Telegram could not fetch it. " +
-          (videoSent.description || "Try again in a moment.")
-        );
+      await send(chat.id, "🎬 Assembling the 7 scenes into one 9:16 MP4...");
+      const fs = require("fs"), path = require("path");
+      const outputPath = path.join("/tmp", "rapsometeddy-draft-" + id + "-" + Date.now() + ".mp4");
+      let finalSent = { ok:false }, renderError = "";
+      try {
+        await renderSlideshow(imageUrls, audioUrl, outputPath);
+        finalSent = await sendLocalVideo(chat.id, outputPath, "🎬 Rapsometeddy final short — draft #" + id);
+      } catch (e) {
+        renderError = String(e?.message || e);
+      } finally {
+        try { fs.unlinkSync(outputPath); } catch {}
       }
 
-      const audioSent = await sendMediaAudio(
-        chat.id,
-        audioUrl,
-        "🎙️ Rapsometeddy voiceover"
-      );
-
-      if (!audioSent.ok) {
-        await send(chat.id,
-          "⚠️ The voiceover was generated but Telegram could not fetch it. " +
-          (audioSent.description || "Try again in a moment.")
-        );
+      if (!finalSent.ok) {
+        const fallback = await sendMediaVideo(chat.id, videoUrl, "🎥 Rapsometeddy fallback video — draft #" + id);
+        if (!fallback.ok) await send(chat.id, "⚠️ Final MP4 failed. " + (renderError || fallback.description || "Unknown media error."));
       }
 
       return sendLong(chat.id,
-        "✅ Media Engine finished for draft #" + id + ".\\n\\n" +
-        "🖼️ " + prompts.length + " image scenes sent.\\n" +
-        "🎥 Video delivery: " + (videoSent.ok ? "✅ sent to Telegram" : "⚠️ failed") + "\\n" +
-        "🎙️ Voiceover delivery: " + (audioSent.ok ? "✅ sent to Telegram" : "⚠️ failed") + "\\n\\n" +
-        "🔐 Media URLs and API credentials are kept out of the Telegram message."
+        "✅ Media Engine finished for draft #" + id + ".\n\n" +
+        "🖼️ " + prompts.length + " generated scenes: ✅\n" +
+        "🎬 Final 9:16 MP4: " + (finalSent.ok ? "✅ sent to Telegram" : "⚠️ fallback used") + "\n" +
+        "🎙️ Voiceover: " + (audioSent.ok ? "✅ sent" : "⚠️ failed") + "\n\n" +
+        "🔐 API credentials are kept out of the Telegram response."
       );
     }
 
