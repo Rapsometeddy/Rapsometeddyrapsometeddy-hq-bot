@@ -844,7 +844,7 @@ Published: ${counts.Published || 0}`);
   }
 
   if (/^\/sports(?:@\w+)?\b/i.test(text)) {
-    const sportsUrl = process.env.SPORTS_ANALYTICS_URL || "https://rapsometeddy-sports-predictor-rgmvntf1l-rapsometeddy017-9306.vercel.app/api/football/analytics";
+    const sportsUrl = process.env.SPORTS_ANALYTICS_URL || "https://rapsometeddy-sports-predictor.vercel.app/api/football/analytics";
     try {
       const r = await fetch(sportsUrl, { headers: { accept: "application/json" } });
       const data = await r.json().catch(() => null);
