@@ -295,7 +295,7 @@ ${rest}`;
 
   function contentDraft(idea, format) {
     const templates = {
-      post: `HOOK: ${idea}
+      post: (value) => `HOOK: ${value}
 
 Here is the simple version:
 • What it is
@@ -303,21 +303,29 @@ Here is the simple version:
 • One practical way to start
 
 CTA: Save this and follow Rapsometeddy for more.`,
-      thread: `THREAD: ${idea}
+      thread: (value) => `THREAD: ${value}
 
 1/ Start with the problem.
 2/ Explain the key idea in plain language.
 3/ Give one practical example.
 4/ Share one beginner-friendly next step.
 5/ End with a simple takeaway.`,
-      short: `SHORT VIDEO: ${idea}
+      short: (value) => `SHORT VIDEO: ${value}
 
 0–3s: Strong hook
 3–10s: Explain the idea
 10–20s: Give one useful example
 20–25s: Call to action`
     };
-    return templates[format](idea);
+    const template = templates[format];
+    return typeof template === "function" ? template(idea) : `HOOK: ${idea}
+
+Here is the simple version:
+• What it is
+• Why it matters
+• One practical way to start
+
+CTA: Save this and follow Rapsometeddy for more.`;
   }
 
   const contentCmd = /^(\/create|\/thread|\/short|\/ideas|\/drafts|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
