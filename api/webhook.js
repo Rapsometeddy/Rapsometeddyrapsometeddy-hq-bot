@@ -175,7 +175,7 @@ Content Machine:
 /drafts — list drafts
 /approve <number> — approve
 /queue <number> — queue
-/published <number> — mark published
+/published <number> — publish now
 
 Admin:
 /announce <text> — publish to the HQ channel
@@ -318,7 +318,7 @@ CTA: Save this and follow Rapsometeddy for more.`,
     return templates[format](idea);
   }
 
-  const contentCmd = /^(\/create|\/thread|\/short|\/ideas|\/drafts|\/approve|\/queue|\/published)(?:@\w+)?\b/i.exec(text);
+  const contentCmd = /^(\/create|\/thread|\/short|\/ideas|\/drafts|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
   if (contentCmd) {
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
@@ -349,7 +349,7 @@ CTA: Save this and follow Rapsometeddy for more.`,
 ${draftContent}
 
 Status: Draft
-Use /approve ${saved.id}, /queue ${saved.id}, or /published ${saved.id}.`);
+Use /approve ${saved.id}, /queue ${saved.id}, or /publish ${saved.id}.`);
       }
 
       return send(chat.id, `📝 Draft created, but persistent storage is not connected yet.
@@ -366,7 +366,7 @@ ${draftContent}
       return send(chat.id, list.map(d => `#${d.id} [${d.status}] ${d.idea}`).join("\n"));
     }
 
-    if (["/approve", "/queue", "/published"].includes(cmd)) {
+    if (["/approve", "/queue", "/publish", "/published"].includes(cmd)) {
       if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
       const match = rest.match(/^(\d+)/);
       if (!match) return send(chat.id, `Usage: ${cmd} <draft number>`);
