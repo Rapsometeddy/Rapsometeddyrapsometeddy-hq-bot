@@ -450,13 +450,16 @@ Published: ${counts.Published || 0}`);
 
   function detectContentType(idea) {
     const v = idea.toLowerCase();
-    if (v.includes("3 mistakes") || v.includes("mistakes beginners")) return "mistakes";
+
+    // Topic-specific experiments take priority over generic title wording.
+    // This prevents “3 mistakes” from forcing every topic into the same format.
+    if (v.includes("r0") || v.includes("no money") || v.includes("without money")) return "r0";
+    if (v.includes("using only a phone") || v.includes("from a phone") || v.includes("phone-only")) return "phone";
     if (v.includes("7-day challenge") || v.includes("challenge")) return "challenge";
     if (v.includes("myth vs reality") || v.includes("myth")) return "myth";
-    if (v.includes("using only a phone") || v.includes("from a phone") || v.includes("phone-only")) return "phone";
-    if (v.includes("r0") || v.includes("no money") || v.includes("without money")) return "r0";
-    if (v.includes("how i would start") || v.includes("build") || v.includes("building")) return "build";
     if (v.includes("what i learned") || v.includes("what nobody tells you")) return "lessons";
+    if (v.includes("how i would start") || v.includes("build") || v.includes("building")) return "build";
+    if (v.includes("3 mistakes") || v.includes("mistakes beginners")) return "mistakes";
     return "guide";
   }
 
