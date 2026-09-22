@@ -390,61 +390,111 @@ Published: ${counts.Published || 0}`);
 /bindchannel — connect the current channel as HQ`);
   }
 
+  function topicFacts(idea) {
+    const value = idea.toLowerCase();
+    if (value.includes("mistakes")) {
+      if (value.includes("ai")) return [
+        "Trying every AI tool instead of choosing one problem to solve.",
+        "Paying for tools before proving the idea works.",
+        "Generating content without checking whether it is actually useful."
+      ];
+      if (value.includes("phone") || value.includes("mobile")) return [
+        "Waiting for a computer instead of starting with the phone already in your hand.",
+        "Installing too many apps instead of building one simple workflow.",
+        "Trying to automate everything before the first manual version works."
+      ];
+      if (value.includes("business") || value.includes("money") || value.includes("entrepreneur")) return [
+        "Starting with a product instead of a real problem.",
+        "Spending money before testing whether anyone wants the solution.",
+        "Trying to scale before finding a repeatable way to deliver value."
+      ];
+      if (value.includes("music") || value.includes("song") || value.includes("rap")) return [
+        "Focusing on tools before developing a clear creative direction.",
+        "Trying to make every track perfect instead of finishing songs.",
+        "Posting music without giving people a reason to remember the artist."
+      ];
+      return [
+        "Trying to learn everything before starting.",
+        "Using complicated tools when a simple solution would work.",
+        "Building without testing the idea with real people."
+      ];
+    }
+    return [
+      "Starting too big instead of proving the smallest useful version.",
+      "Choosing tools before clearly defining the problem.",
+      "Building in silence instead of testing and learning from feedback."
+    ];
+  }
+
   function contentDraft(idea, format) {
+    const facts = topicFacts(idea);
     const templates = {
       post: (value) => `🔥 ${value}
 
-Most people overcomplicate this.
+Here are the 3 things I'd watch out for:
 
-Here’s the simple play:
-1. Start with one small, useful step.
-2. Use free tools before paying for anything.
-3. Test what works and improve it.
-4. Share what you learn.
+1️⃣ ${facts[0]}
+2️⃣ ${facts[1]}
+3️⃣ ${facts[2]}
 
-💡 The goal isn't to look like an expert. It's to keep building until you have something real.
+💡 The fix: start with one small version, test it, learn from the result, then improve.
 
-🎯 Takeaway: Start small. Build consistently. Let the results teach you.
+🎯 You don't need a perfect setup. You need a working first step.
 
-#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship`,
-      thread: (value) => `🧵 THREAD: ${value}
+#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship
 
-1/ Here's the idea in plain English: start with the smallest useful version.
+CTA: Save this for your next project.`,
+      thread: (value) => `🧵 ${value}
 
-2/ Don't wait for perfect tools, money or a huge audience.
+1/ The biggest trap is trying to get everything right before you begin.
 
-3/ Pick one problem. Build one solution. Test it with real people.
+2/ Mistake #1: ${facts[0]}
 
-4/ Document what works — and especially what doesn't.
+3/ Mistake #2: ${facts[1]}
 
-5/ Improve the next version using what you learned.
+4/ Mistake #3: ${facts[2]}
 
-🎯 Takeaway: Build → test → learn → repeat.
+5/ The better approach: build the smallest useful version, test it, then improve it.
+
+🎯 Build → test → learn → repeat.
 
 — Rapsometeddy`,
       short: (value) => `🎬 SHORT VIDEO: ${value}
 
 0–3s — HOOK
-“Most people make this harder than it needs to be.”
+“Here are 3 mistakes beginners keep making.”
 
-3–8s — PROBLEM
-“Here’s what beginners usually get wrong…”
+3–8s — MISTAKE #1
+“${facts[0]}”
 
-8–18s — VALUE
-“Start small, use free tools, test one idea, then improve it.”
+8–13s — MISTAKE #2
+“${facts[1]}”
 
-18–23s — TAKEAWAY
-“You don't need everything. You need the first working version.”
+13–18s — MISTAKE #3
+“${facts[2]}”
 
-23–27s — CTA
-“Follow Rapsometeddy for the build.”`
+18–25s — FIX
+“Start small, test the idea, then improve what actually works.”
+
+25–30s — CTA
+“Save this for your next project and follow Rapsometeddy.”`
     };
     const template = templates[format];
     return typeof template === "function" ? template(idea) : templates.post(idea);
   }
 
   function contentPackage(idea) {
+    const facts = topicFacts(idea);
     const core = contentDraft(idea, "post");
+    const ctas = [
+      "Save this for your next project.",
+      "What would you build with this?",
+      "Try one step today and see what happens.",
+      "Follow the build — more experiments coming.",
+      "What should Rapsometeddy build next?"
+    ];
+    const cta = ctas[Math.floor(Date.now() / 86400000) % ctas.length];
+
     return `🧸 RAPSOMETTEDY CONTENT PACKAGE
 
 ━━━━━━━━━━━━━━━━━━
@@ -459,11 +509,15 @@ ${core}
 
 ${idea}
 
-Most people overcomplicate this.
+3 things beginners get wrong:
 
-Start small. Use free tools. Test one idea. Learn from the result. Then improve.
+1. ${facts[0]}
+2. ${facts[1]}
+3. ${facts[2]}
 
-Build → test → learn → repeat.
+Better approach: build the smallest useful version, test it, then improve.
+
+${cta}
 
 — Rapsometeddy
 
@@ -473,15 +527,18 @@ Build → test → learn → repeat.
 
 ${idea}
 
-You don't need a perfect setup to start.
+The beginner trap is making the journey more complicated than it needs to be.
 
-Pick one small problem.
-Build one useful solution.
-Test it.
-Document what you learn.
-Improve the next version.
+❌ ${facts[0]}
+❌ ${facts[1]}
+❌ ${facts[2]}
 
-🎯 Start small. Build consistently.
+✅ Start small.
+✅ Test early.
+✅ Learn from real feedback.
+✅ Improve the next version.
+
+${cta}
 
 #Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship #Creator
 
@@ -491,8 +548,13 @@ Improve the next version.
 
 🧸 ${idea}
 
-Quick takeaway:
-Start with one small action, test it with real people, and improve from there.
+The 3 traps:
+
+1️⃣ ${facts[0]}
+2️⃣ ${facts[1]}
+3️⃣ ${facts[2]}
+
+💡 Simple fix: start with one useful version and improve it from there.
 
 Build • Learn • Create • Invest 🚀
 
