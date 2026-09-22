@@ -301,7 +301,7 @@ ${rest}`;
     }
   }
 
-  if (/^\\/status(?:@\\w+)?\\b/i.test(text)) {
+  if (/^\/status(?:@\w+)?\b/i.test(text)) {
     const s = integrationStatus();
     const counts = await draftCounts(chat.id);
     return send(chat.id, `📊 Rapsometeddy HQ Status
