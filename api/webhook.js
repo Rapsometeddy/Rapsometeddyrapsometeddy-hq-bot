@@ -335,13 +335,31 @@ Use /help to see what the bot can do.`);
     const topic = args(text) || "Create a cinematic Rapsometeddy AI, tech and entrepreneurship short.";
     await send(chat.id, "🎬 Render request received.\\n\\nTelegram → Vercel → 7 scenes → background renderer → FFmpeg.\\n\\nI’ll report the exact stage if rendering/audio fails.");
     const rendererUrl = process.env.CONTENT_MACHINE_URL || "https://rapsometeddy-content-machine.vercel.app/api/render";
-    fetch(rendererUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: topic, telegramChatId: chat.id })
-    }).then(async r => console.log("[CONTENT_MACHINE_RENDER]", r.status, (await r.text()).slice(0, 5000)))
-      .catch(e => console.error("[CONTENT_MACHINE_RENDER_REQUEST_FAILED]", e));
-    return;
+    try {
+      const r = await fetch(rendererUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: topic, telegramChatId: chat.id })
+      });
+      const raw = await r.text();
+      let result = null;
+      try { result = JSON.parse(raw); } catch {}
+
+      console.log("[CONTENT_MACHINE_RENDER]", r.status, raw.slice(0, 5000));
+
+      if (!r.ok) {
+        return send(chat.id, "❌ Render failed at Vercel.\\n\\nHTTP " + r.status + "\\n" + (result?.error || result?.message || raw.slice(0, 1200) || "Unknown error."));
+      }
+
+      if (result?.ok === false) {
+        return send(chat.id, "⚠️ Render finished with an error.\\n\\n" + (result.error || result.message || "Unknown render error."));
+      }
+
+      return sendLong(chat.id, "✅ Render request completed.\\n\\n" + (result?.message || result?.status || "Vercel returned successfully.") + (result?.error ? "\\n\\n⚠️ " + result.error : ""));
+    } catch (e) {
+      console.error("[CONTENT_MACHINE_RENDER_REQUEST_FAILED]", e);
+      return send(chat.id, "❌ Could not reach the Content Machine.\\n\\n" + String(e?.message || e));
+    }
   }
 
   if (!text) return;
