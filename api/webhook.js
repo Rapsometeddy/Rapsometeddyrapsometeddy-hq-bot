@@ -564,15 +564,64 @@ Published: ${counts.Published || 0}`);
 
     if (cmd === "/auto") {
       const topic = rest || "Rapsometeddy";
-      const pool = [
-        `A beginner's guide to ${topic}`,
-        `3 mistakes beginners make with ${topic}`,
-        `How I would start ${topic} with R0 and a phone`,
-        `What nobody tells you about ${topic}`,
-        `Free tools that make ${topic} easier`,
-        `Can you build a real project around ${topic} using only a phone?`
-      ];
-      const idea = pool[Math.floor(Date.now() / 3600000) % pool.length];
+      const v = topic.toLowerCase();
+
+      // Choose the content archetype from the topic itself so the headline,
+      // structure and platform versions always describe the same thing.
+      let archetype = "guide";
+      if (v.includes("r0") || v.includes("no money") || v.includes("without money")) archetype = "r0";
+      else if (v.includes("phone") || v.includes("mobile") || v.includes("from a phone")) archetype = "phone";
+      else if (v.includes("challenge")) archetype = "challenge";
+      else if (v.includes("mistake")) archetype = "mistakes";
+      else if (v.includes("myth")) archetype = "myth";
+      else if (v.includes("learned") || v.includes("nobody tells")) archetype = "lessons";
+      else if (v.includes("build") || v.includes("app") || v.includes("project")) archetype = "build";
+
+      const builders = {
+        phone: [
+          `📱 7-day AI app build from a phone: ${topic}`,
+          `📱 Phone-only build experiment: ${topic}`,
+          `🛠️ Can I build ${topic} using only a phone?`
+        ],
+        r0: [
+          `💸 R0 experiment: test ${topic} without spending money`,
+          `💸 How I'd test ${topic} with R0`,
+          `🧪 Can ${topic} work with R0?`
+        ],
+        challenge: [
+          `🔥 7-day challenge: ${topic}`,
+          `🗓️ 7 days to test ${topic}`,
+          `🚀 The ${topic} build challenge`
+        ],
+        mistakes: [
+          `❌ 3 real mistakes beginners make with ${topic}`,
+          `⚠️ 3 ways beginners go wrong with ${topic}`,
+          `🧠 3 mistakes I'd avoid with ${topic}`
+        ],
+        myth: [
+          `🧠 Myth vs reality: ${topic}`,
+          `🔍 What people get wrong about ${topic}`,
+          `💡 ${topic}: myth vs reality`
+        ],
+        lessons: [
+          `📝 What I learned from ${topic}`,
+          `🧠 What nobody tells you about ${topic}`,
+          `🚀 Lessons from building around ${topic}`
+        ],
+        build: [
+          `🛠️ Step-by-step: building ${topic}`,
+          `🚀 How I'd build ${topic} from scratch`,
+          `🧪 Build experiment: ${topic}`
+        ],
+        guide: [
+          `💡 Beginner guide to ${topic}`,
+          `🚀 The simple way to start ${topic}`,
+          `🧠 ${topic}: what I'd learn first`
+        ]
+      };
+
+      const options = builders[archetype] || builders.guide;
+      const idea = options[Math.floor(Date.now() / 86400000) % options.length];
       const draftContent = contentPackage(idea);
 
       if (!dbEnabled()) {
@@ -584,7 +633,6 @@ Published: ${counts.Published || 0}`);
 
       return send(chat.id, `🤖 Auto draft #${saved.id} created.\n\n💡 Idea: ${idea}\n\n${draftContent}\n\nStatus: Draft\n\nReview it, then use:\n/approve ${saved.id}\n/queue ${saved.id}\n/publish ${saved.id}`);
     }
-
     if (cmd === "/idea" || cmd === "/ideas") {
       const topic = rest || "Rapsometeddy";
       const pool = [
