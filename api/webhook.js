@@ -331,7 +331,7 @@ async function handleMessage(msg) {
 Use /help to see what the bot can do.`);
   }
 
-  if (/^\\/render(?:@\\w+)?\\b/i.test(text)) {
+  if (text.trim().match(/^\/render(?:@\w+)?\b/i)) {
     const topic = args(text) || "Create a cinematic Rapsometeddy AI, tech and entrepreneurship short.";
     await send(chat.id, "🎬 Render request received.\\n\\nTelegram → Vercel → 7 scenes → background renderer → FFmpeg.\\n\\nI’ll report the exact stage if rendering/audio fails.");
     const rendererUrl = process.env.CONTENT_MACHINE_URL || "https://rapsometeddy-content-machine.vercel.app/api/render";
