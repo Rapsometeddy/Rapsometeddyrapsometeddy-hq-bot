@@ -2,7 +2,9 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\\/$/, "");
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_KEY = SUPABASE_SECRET_KEY || SUPABASE_SERVICE_ROLE_KEY;
 
 const API = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : "";
 
@@ -40,8 +42,8 @@ async function dbRequest(path, options = {}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
       "Content-Type": "application/json",
       ...(options.headers || {})
     }
@@ -55,7 +57,7 @@ async function dbRequest(path, options = {}) {
 }
 
 function dbEnabled() {
-  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(SUPABASE_URL && SUPABASE_KEY);
 }
 
 async function saveDraft(chatId, userId, format, idea, content) {
