@@ -301,6 +301,24 @@ ${rest}`;
     }
   }
 
+  if (/^\\/status(?:@\\w+)?\\b/i.test(text)) {
+    const s = integrationStatus();
+    const counts = await draftCounts(chat.id);
+    return send(chat.id, `📊 Rapsometeddy HQ Status
+
+Telegram bot: ${s.telegram ? "✅" : "❌"}
+Supabase: ${s.supabase ? "✅" : "❌"}
+HQ channel: ${s.telegramChannel ? "✅ configured" : "⚠️ not configured"}
+X: ${s.x ? "✅ credentials found" : "⚪ not configured"}
+Meta/Facebook: ${s.meta ? "✅ credentials found" : "⚪ not configured"}
+Instagram: ${s.instagram ? "✅ credentials found" : "⚪ not configured"}
+
+Drafts: ${counts.Draft || 0}
+Approved: ${counts.Approved || 0}
+Queued: ${counts.Queued || 0}
+Published: ${counts.Published || 0}`);
+  }
+
   if (/^\/content(?:@\w+)?\b/i.test(text)) {
     return send(chat.id, `🧸 Content Machine
 
