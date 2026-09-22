@@ -1,6 +1,27 @@
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
+
+async function getConfiguredChannelId() {
+  if (CHANNEL_ID) return CHANNEL_ID;
+  if (!dbEnabled()) return "";
+  const rows = await dbRequest("bot_settings?key=eq.telegram_hq_channel_id&limit=1&select=value");
+  return rows?.[0]?.value || "";
+}
+
+async function setConfiguredChannelId(channelId) {
+  if (!dbEnabled()) return false;
+  const rows = await dbRequest("bot_settings?key=eq.telegram_hq_channel_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({
+      key: "telegram_hq_channel_id",
+      value: String(channelId),
+      updated_at: new Date().toISOString()
+    })
+  });
+  return Boolean(rows?.length);
+}
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -54,11 +75,12 @@ async function dbRequest(path, options = {}) {
   return r.status === 204 ? [] : r.json();
 }
 
-function integrationStatus() {
+async function integrationStatus() {
+  const configuredChannelId = await getConfiguredChannelId();
   return {
     telegram: Boolean(BOT_TOKEN),
     supabase: dbEnabled(),
-    telegramChannel: Boolean(CHANNEL_ID),
+    telegramChannel: Boolean(configuredChannelId),
     x: Boolean(process.env.X_BEARER_TOKEN || process.env.X_API_KEY || process.env.X_ACCESS_TOKEN),
     meta: Boolean(process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_ACCESS_TOKEN),
     instagram: Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
@@ -114,7 +136,8 @@ async function setDraftStatus(id, status) {
 }
 
 async function publishDraft(chatId, draft) {
-  const destination = CHANNEL_ID || chatId;
+  const configuredChannelId = await getConfiguredChannelId();
+  const destination = configuredChannelId || chatId;
   const r = await send(destination, `🧸 Rapsometeddy HQ\n\n${draft.content}`);
   if (r.ok && dbEnabled()) {
     await setDraftStatus(draft.id, "Published");
@@ -185,6 +208,7 @@ Member:
 /rules — community rules
 /about — about HQ
 /id — show chat ID
+/bindchannel — connect the current channel as HQ
 
 Content Machine:
 /content — Content Machine help
@@ -228,6 +252,17 @@ Build • Learn • Create • Invest`);
 
   if (/^\/id(?:@\w+)?\b/i.test(text)) return send(chat.id, `📡 Chat ID: ${chat.id}`);
 
+  if (/^\/bindchannel(?:@\w+)?\b/i.test(text)) {
+    if (chat.type === "channel") {
+      const ok = await setConfiguredChannelId(chat.id);
+      return ok
+        ? send(chat.id, "✅ This channel is now connected as Rapsometeddy HQ.\n\nContent Machine publishing will use this channel.")
+        : send(chat.id, "❌ I couldn't save this channel connection.");
+    }
+    if (!user || !(await requireAdmin(chat.id, user.id))) return send(chat.id, "⛔ Admins only.");
+    return send(chat.id, "📡 To connect the HQ channel, post /bindchannel inside the HQ channel itself. The bot must be an admin there.");
+  }
+
   const adminCmd = /^(\/announce|\/pin|\/warn|\/unwarn|\/mute|\/unmute|\/ban|\/unban|\/welcome|\/setrules)(?:@\w+)?\b/i.exec(text);
 
   if (adminCmd) {
@@ -238,7 +273,8 @@ Build • Learn • Create • Invest`);
 
     if (cmd === "/announce") {
       if (!rest) return send(chat.id, "Usage: /announce Your message");
-      const destination = CHANNEL_ID || chat.id;
+      const configuredChannelId = await getConfiguredChannelId();
+      const destination = configuredChannelId || chat.id;
       const r = await send(destination, `📢 ${rest}`);
       return send(chat.id, r.ok ? "✅ Announcement published." : `Could not publish: ${r.description || "unknown error"}`);
     }
@@ -302,7 +338,7 @@ ${rest}`;
   }
 
   if (/^\/status(?:@\w+)?\b/i.test(text)) {
-    const s = integrationStatus();
+    const s = await integrationStatus();
     const counts = await draftCounts(chat.id);
     return send(chat.id, `📊 Rapsometeddy HQ Status
 
@@ -329,7 +365,8 @@ Published: ${counts.Published || 0}`);
 /drafts — show saved drafts
 /approve <id> — approve a draft
 /queue <id> — queue a draft
-/publish <id> — publish a draft now\n/status — connection & draft status`);
+/publish <id> — publish a draft now\n/status — connection & draft status
+/bindchannel — connect the current channel as HQ`);
   }
 
   function contentDraft(idea, format) {
