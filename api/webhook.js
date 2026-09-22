@@ -348,7 +348,12 @@ Use /help to see what the bot can do.`);
       console.log("[CONTENT_MACHINE_RENDER]", r.status, raw.slice(0, 5000));
 
       if (!r.ok) {
-        return send(chat.id, "❌ Render failed at Vercel.\\n\\nHTTP " + r.status + "\\n" + (result?.error || result?.message || raw.slice(0, 1200) || "Unknown error."));
+        const detail = typeof result?.error === "string"
+          ? result.error
+          : result?.error?.message
+            ? ((result.error.stage ? result.error.stage + ": " : "") + result.error.message)
+            : result?.message || raw.slice(0, 1200) || "Unknown error.";
+        return send(chat.id, "❌ Render failed at Vercel.\\n\\nHTTP " + r.status + "\\n" + detail);
       }
 
       if (result?.ok === false) {
