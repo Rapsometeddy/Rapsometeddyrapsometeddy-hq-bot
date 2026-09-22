@@ -576,6 +576,35 @@ Published: ${counts.Published || 0}`);
     );
   }
 
+  function visualPackage(topic, type) {
+    const v = topic.toLowerCase();
+    const subject = v.includes("ai") ? "AI-powered" : "tech";
+    const style = "cinematic futuristic Rapsometeddy aesthetic, dark tech workspace, subtle glowing accents, realistic smartphone, clean composition, vertical 9:16, no logos, no readable text";
+    const prompts = type === "phone"
+      ? [
+          "Rapsometeddy planning an app idea on a Samsung-style smartphone, " + style,
+          "close-up smartphone showing a simple app wireframe and feature plan, " + style,
+          "phone-only development workflow with code and app interface visible on screen, " + style,
+          "AI connection concept flowing from a smartphone into a glowing neural interface, " + style,
+          "hands testing a mobile app on a phone, bug indicators and test notes, " + style,
+          "developer fixing a mobile app on a phone with a focused late-night workspace, " + style,
+          "finished mobile app demo on a smartphone, confident creator presenting the result, " + style
+        ]
+      : [
+          "Rapsometeddy exploring " + topic + " in a futuristic tech workspace, " + style,
+          "visual metaphor for the main problem behind " + topic + ", " + style,
+          "simple first version of a " + subject + " project on a smartphone, " + style,
+          "testing and improving a small digital project, " + style,
+          "finished project being presented by Rapsometeddy, " + style
+        ];
+    const shots = prompts.map((p,i) => (i+1) + ". SHOT " + (i+1) + "\nIMAGE PROMPT: " + p + "\nMOTION: slow push-in with subtle parallax\nDURATION: " + (type === "phone" ? "4s" : "5s"));
+    return "🖼️ IMAGE PROMPTS\n\n" + shots.map(x => x.split("\nMOTION")[0]).join("\n\n") +
+      "\n\n━━━━━━━━━━━━━━━━━━\n🎬 VIDEO SHOT LIST\n━━━━━━━━━━━━━━━━━━\n\n" +
+      shots.join("\n\n") +
+      "\n\n🎨 VISUAL STYLE\n" + style +
+      "\n\n📐 FORMAT\n9:16 vertical • short-form video • phone-friendly";
+  }
+
   function makePackage(master, xVersion, instagram, telegram, short) {
     return "🧸 RAPSOMETTEDY CONTENT PACKAGE\n\n━━━━━━━━━━━━━━━━━━\n📝 MASTER POST\n━━━━━━━━━━━━━━━━━━\n\n" + master + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship\n\n━━━━━━━━━━━━━━━━━━\n🐦 X VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + xVersion + "\n\n━━━━━━━━━━━━━━━━━━\n📸 INSTAGRAM VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + instagram + "\n\n━━━━━━━━━━━━━━━━━━\n💬 TELEGRAM VERSION\n━━━━━━━━━━━━━━━━━━\n\n" + telegram + "\n\n━━━━━━━━━━━━━━━━━━\n🎬 SHORT VIDEO\n━━━━━━━━━━━━━━━━━━\n\n" + short;
   }
@@ -609,7 +638,7 @@ Published: ${counts.Published || 0}`);
 
       const builders = {
         phone: [
-          `📱 7-day AI app build from a phone: ${topic}`,
+          `📱 7-Day AI App Build From a Phone`,
           `📱 Phone-only build experiment: ${topic}`,
           `🛠️ Can I build ${topic} using only a phone?`
         ],
@@ -652,7 +681,7 @@ Published: ${counts.Published || 0}`);
 
       const options = builders[archetype] || builders.guide;
       const idea = options[Math.floor(Date.now() / 86400000) % options.length];
-      const draftContent = contentPackage(idea, archetype, topic);
+      const draftContent = contentPackage(idea, archetype, topic) + "\n\n━━━━━━━━━━━━━━━━━━\n🎨 VISUAL PRODUCTION KIT\n━━━━━━━━━━━━━━━━━━\n\n" + visualPackage(topic, archetype);
 
       if (!dbEnabled()) {
         return send(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
