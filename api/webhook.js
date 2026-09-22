@@ -212,7 +212,7 @@ Member:
 
 Content Machine:
 /content — Content Machine help
-/idea [topic] — generate 5 fresh ideas
+/auto [topic] — generate a full content package\n/idea [topic] — generate 5 fresh ideas
 /ideas [topic] — same as /idea
 /create <idea> — create a post draft
 /thread <idea> — create a thread draft
@@ -392,30 +392,115 @@ Published: ${counts.Published || 0}`);
 
   function contentDraft(idea, format) {
     const templates = {
-      post: (value) => `HOOK: ${value}
+      post: (value) => `🔥 ${value}
 
-Here is the simple version:
-• What it is
-• Why it matters
-• One practical way to start
+Most people overcomplicate this.
 
-CTA: Save this and follow Rapsometeddy for more.`,
-      thread: (value) => `THREAD: ${value}
+Here’s the simple play:
+1. Start with one small, useful step.
+2. Use free tools before paying for anything.
+3. Test what works and improve it.
+4. Share what you learn.
 
-1/ Start with the problem.
-2/ Explain the key idea in plain language.
-3/ Give one practical example.
-4/ Share one beginner-friendly next step.
-5/ End with a simple takeaway.`,
-      short: (value) => `SHORT VIDEO: ${value}
+💡 The goal isn't to look like an expert. It's to keep building until you have something real.
 
-0–3s: Strong hook
-3–10s: Explain the idea
-10–20s: Give one useful example
-20–25s: Call to action`
+🎯 Takeaway: Start small. Build consistently. Let the results teach you.
+
+#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship`,
+      thread: (value) => `🧵 THREAD: ${value}
+
+1/ Here's the idea in plain English: start with the smallest useful version.
+
+2/ Don't wait for perfect tools, money or a huge audience.
+
+3/ Pick one problem. Build one solution. Test it with real people.
+
+4/ Document what works — and especially what doesn't.
+
+5/ Improve the next version using what you learned.
+
+🎯 Takeaway: Build → test → learn → repeat.
+
+— Rapsometeddy`,
+      short: (value) => `🎬 SHORT VIDEO: ${value}
+
+0–3s — HOOK
+“Most people make this harder than it needs to be.”
+
+3–8s — PROBLEM
+“Here’s what beginners usually get wrong…”
+
+8–18s — VALUE
+“Start small, use free tools, test one idea, then improve it.”
+
+18–23s — TAKEAWAY
+“You don't need everything. You need the first working version.”
+
+23–27s — CTA
+“Follow Rapsometeddy for the build.”`
     };
     const template = templates[format];
     return typeof template === "function" ? template(idea) : templates.post(idea);
+  }
+
+  function contentPackage(idea) {
+    const core = contentDraft(idea, "post");
+    return `🧸 RAPSOMETTEDY CONTENT PACKAGE
+
+━━━━━━━━━━━━━━━━━━
+📝 MASTER POST
+━━━━━━━━━━━━━━━━━━
+
+${core}
+
+━━━━━━━━━━━━━━━━━━
+🐦 X VERSION
+━━━━━━━━━━━━━━━━━━
+
+${idea}
+
+Most people overcomplicate this.
+
+Start small. Use free tools. Test one idea. Learn from the result. Then improve.
+
+Build → test → learn → repeat.
+
+— Rapsometeddy
+
+━━━━━━━━━━━━━━━━━━
+📸 INSTAGRAM VERSION
+━━━━━━━━━━━━━━━━━━
+
+${idea}
+
+You don't need a perfect setup to start.
+
+Pick one small problem.
+Build one useful solution.
+Test it.
+Document what you learn.
+Improve the next version.
+
+🎯 Start small. Build consistently.
+
+#Rapsometeddy #BuildInPublic #Tech #AI #Entrepreneurship #Creator
+
+━━━━━━━━━━━━━━━━━━
+💬 TELEGRAM VERSION
+━━━━━━━━━━━━━━━━━━
+
+🧸 ${idea}
+
+Quick takeaway:
+Start with one small action, test it with real people, and improve from there.
+
+Build • Learn • Create • Invest 🚀
+
+━━━━━━━━━━━━━━━━━━
+🎬 SHORT VIDEO
+━━━━━━━━━━━━━━━━━━
+
+${contentDraft(idea, "short")}`;
   }
 
   const contentCmd = /^(\/auto|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
@@ -434,7 +519,7 @@ CTA: Save this and follow Rapsometeddy for more.`,
         `Can you build a real project around ${topic} using only a phone?`
       ];
       const idea = pool[Math.floor(Date.now() / 3600000) % pool.length];
-      const draftContent = contentDraft(idea, "post");
+      const draftContent = contentPackage(idea);
 
       if (!dbEnabled()) {
         return send(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
