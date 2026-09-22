@@ -89,6 +89,17 @@ Member:
 /about — about HQ
 /id — show chat ID
 
+Content Machine:
+/content — Content Machine help
+/create <idea> — create a post draft
+/thread <idea> — create a thread draft
+/short <idea> — create a short-video script
+/ideas — content ideas
+/drafts — list drafts
+/approve <number> — approve
+/queue <number> — queue
+/published <number> — mark published
+
 Admin:
 /announce <text> — publish to the HQ channel
 /pin — pin the replied-to message
