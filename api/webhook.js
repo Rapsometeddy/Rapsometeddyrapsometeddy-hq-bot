@@ -68,10 +68,10 @@ function pollinationsUrl(kind, prompt, params = {}) {
 }
 
 function extractImagePrompts(content) {
-  const section = String(content || "").split("━━━━━━━━━━━━━━━━━━\\n🎬 VIDEO SHOT LIST")[0];
-  const match = section.match(/🖼️ IMAGE PROMPTS\\n\\n([\\s\\S]*?)(?:\\n\\n━━━━━━━━━━━━━━━━━━|$)/);
+  const section = String(content || "").split("━━━━━━━━━━━━━━━━━━\n🎬 VIDEO SHOT LIST")[0];
+  const match = section.match(/🖼️ IMAGE PROMPTS\n\n([\s\S]*?)(?:\n\n━━━━━━━━━━━━━━━━━━|$)/);
   if (!match) return [];
-  return [...match[1].matchAll(/(?:^|\\n)\\s*(\\d+)\\.\\s+(.+)/g)]
+  return [...match[1].matchAll(/(?:^|\n)\s*(\d+)\.\s+(.+)/g)]
     .map(m => m[2].trim())
     .filter(Boolean)
     .slice(0, 7);
