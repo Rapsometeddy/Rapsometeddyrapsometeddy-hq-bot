@@ -423,6 +423,29 @@ CTA: Save this and follow Rapsometeddy for more.`,
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
 
+    if (cmd === "/auto") {
+      const topic = rest || "Rapsometeddy";
+      const pool = [
+        `A beginner's guide to ${topic}`,
+        `3 mistakes beginners make with ${topic}`,
+        `How I would start ${topic} with R0 and a phone`,
+        `What nobody tells you about ${topic}`,
+        `Free tools that make ${topic} easier`,
+        `Can you build a real project around ${topic} using only a phone?`
+      ];
+      const idea = pool[Math.floor(Date.now() / 3600000) % pool.length];
+      const draftContent = contentDraft(idea, "post");
+
+      if (!dbEnabled()) {
+        return send(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
+      }
+
+      const saved = await saveDraft(chat.id, user?.id, "post", idea, draftContent);
+      if (!saved) return send(chat.id, "⚠️ I couldn't save the auto-generated draft.");
+
+      return send(chat.id, `🤖 Auto draft #${saved.id} created.\n\n💡 Idea: ${idea}\n\n${draftContent}\n\nStatus: Draft\n\nReview it, then use:\n/approve ${saved.id}\n/queue ${saved.id}\n/publish ${saved.id}`);
+    }
+
     if (cmd === "/idea" || cmd === "/ideas") {
       const topic = rest || "Rapsometeddy";
       const pool = [
