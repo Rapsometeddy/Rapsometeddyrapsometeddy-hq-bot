@@ -240,6 +240,99 @@ ${rest}`;
     }
   }
 
+  // Rapsometeddy Content Machine commands.
+  if (/^\\/content(?:@\\w+)?\\b/i.test(text)) {
+    return send(chat.id, `🧸 Content Machine
+
+/create <idea> — create a post draft
+/thread <idea> — create a thread draft
+/short <idea> — create a short-video script
+/ideas — get content ideas
+/drafts — show drafts for this bot session
+/approve <number> — approve a draft
+/queue <number> — queue a draft
+/published <number> — mark it published
+
+Dashboard: https://rapsometeddy-content-machine.vercel.app`);
+  }
+
+  if (!globalThis.__rtContentDrafts) globalThis.__rtContentDrafts = [];
+
+  function contentDraft(idea, format) {
+    const templates = {
+      post: \`HOOK: ${idea}
+
+Here is the simple version:
+• What it is
+• Why it matters
+• One practical way to start
+
+CTA: Save this and follow Rapsometeddy for more.\`,
+      thread: \`THREAD: ${idea}
+
+1/ Start with the problem.
+2/ Explain the key idea in plain language.
+3/ Give one practical example.
+4/ Share one beginner-friendly next step.
+5/ End with a simple takeaway.\`,
+      short: \`SHORT VIDEO: ${idea}
+
+0–3s: Strong hook
+3–10s: Explain the idea
+10–20s: Give one useful example
+20–25s: Call to action\`
+    };
+    return templates[format](idea);
+  }
+
+  const contentCmd = /^(\\/create|\\/thread|\\/short|\\/ideas|\\/drafts|\\/approve|\\/queue|\\/published)(?:@\\w+)?\\b/i.exec(text);
+  if (contentCmd) {
+    const cmd = contentCmd[1].toLowerCase();
+    const rest = args(text);
+
+    if (cmd === "/content") return null;
+
+    if (cmd === "/ideas") {
+      return send(chat.id, `💡 Content ideas
+
+1. 5 useful AI tools for students
+2. How to build an app from a phone
+3. GitHub basics for beginners
+4. Realistic online business ideas
+5. AI + music for independent creators
+6. What I learned building Rapsometeddy HQ`);
+    }
+
+    if (cmd === "/create" || cmd === "/thread" || cmd === "/short") {
+      if (!rest) return send(chat.id, `Usage: ${cmd} Your content idea`);
+      const format = cmd === "/create" ? "post" : cmd.slice(1);
+      const draft = { format, idea: rest, content: contentDraft(rest, format), status: "Draft", created: Date.now() };
+      globalThis.__rtContentDrafts.unshift(draft);
+      const n = globalThis.__rtContentDrafts.length;
+      return send(chat.id, `📝 Draft #${n} created
+
+${draft.content}
+
+Use /approve ${n} or /queue ${n}.`);
+    }
+
+    if (cmd === "/drafts") {
+      const list = globalThis.__rtContentDrafts;
+      if (!list.length) return send(chat.id, "📭 No drafts in this bot instance yet. Try /create Your idea");
+      return send(chat.id, list.slice(0,10).map((d,i) => `#${i+1} [${d.status}] ${d.idea}`).join("\\n"));
+    }
+
+    const match = rest.match(/^(\\d+)/);
+    if (["/approve","/queue","/published"].includes(cmd)) {
+      if (!match) return send(chat.id, `Usage: ${cmd} <draft number>`);
+      const index = Number(match[1]) - 1;
+      const d = globalThis.__rtContentDrafts[index];
+      if (!d) return send(chat.id, "❌ Draft not found.");
+      d.status = cmd === "/approve" ? "Approved" : cmd === "/queue" ? "Queued" : "Published";
+      return send(chat.id, `✅ Draft #${index+1} marked ${d.status}.`);
+    }
+  }
+
   // Basic anti-link filter for group chats. Admins are exempt.
   if (chat.type !== "private" && /(https?:\/\/|t\.me\/|www\.)/i.test(text)) {
     if (user && !(await requireAdmin(chat.id, user.id))) {
