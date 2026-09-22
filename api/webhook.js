@@ -497,53 +497,83 @@ Published: ${counts.Published || 0}`);
     ];
   }
 
-  function contentPackage(idea) {
-    const type = detectContentType(idea);
-    const facts = contentFacts(idea);
+  function contentPackage(idea, forcedType = null, rawTopic = null) {
+    const type = forcedType || detectContentType(idea);
+    const topic = rawTopic || idea;
+    const v = topic.toLowerCase();
     const cta = ["Save this for your next project.","What would you build with this?","Try one step today.","Follow the build — more experiments coming.","What should Rapsometeddy build next?"][Math.floor(Date.now() / 86400000) % 5];
 
-    if (type === "mistakes") {
-      return makePackage(
-        "🔥 " + idea + "\n\n3 mistakes beginners make:\n\n1️⃣ " + facts[0] + "\n2️⃣ " + facts[1] + "\n3️⃣ " + facts[2] + "\n\n💡 Fix: start small, test early, then improve what works.",
-        idea + "\n\n1. " + facts[0] + "\n2. " + facts[1] + "\n3. " + facts[2] + "\n\nBetter approach: build the smallest useful version, test it, then improve.\n\n" + cta + "\n\n— Rapsometeddy",
-        "❌ " + facts[0] + "\n❌ " + facts[1] + "\n❌ " + facts[2] + "\n\n✅ Start small. Test early. Learn. Improve.\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI",
-        "🧸 " + idea + "\n\n1️⃣ " + facts[0] + "\n2️⃣ " + facts[1] + "\n3️⃣ " + facts[2] + "\n\n💡 Start with one useful version and improve it.\n\nBuild • Learn • Create • Invest 🚀",
-        "0–3s HOOK: “Here are 3 mistakes beginners keep making.”\n\n3–8s #1: “" + facts[0] + "”\n8–13s #2: “" + facts[1] + "”\n13–18s #3: “" + facts[2] + "”\n18–25s FIX: “Start small, test, then improve.”\n25–30s CTA: “" + cta + "”"
-      );
-    }
-
     if (type === "phone") {
+      const isAiApp = v.includes("ai") && v.includes("app");
+      const title = isAiApp ? "📱 7-Day AI App Build From a Phone" : "📱 7-Day Build From a Phone";
+      const goal = isAiApp ? "Can I build a useful AI app using only a phone?" : "Can I build a useful project using only a phone?";
+      const days = isAiApp
+        ? "DAY 1 — Choose one real problem.\nDAY 2 — Design the smallest useful feature.\nDAY 3 — Build the first version.\nDAY 4 — Connect the AI.\nDAY 5 — Test it on the phone.\nDAY 6 — Fix what breaks.\nDAY 7 — Share the result and lessons."
+        : "DAY 1 — Choose one problem.\nDAY 2 — Plan the smallest solution.\nDAY 3 — Build the first version.\nDAY 4 — Connect what you need.\nDAY 5 — Test it.\nDAY 6 — Fix what breaks.\nDAY 7 — Share the result.";
+
       return makePackage(
-        "📱 " + idea + "\n\nThe goal isn't a massive app. It's proving a useful first version can be built with the device you already have.\n\n1️⃣ Pick one problem.\n2️⃣ Build one feature.\n3️⃣ Connect only what you need.\n4️⃣ Test it on your phone.\n5️⃣ Document what breaks.\n\n🎯 Ship a tiny working version before adding more features.",
-        "Can you build an AI project using only a phone?\n\nOne problem. One feature. One workflow.\n\nBuild → test → fix → repeat.\n\nThe constraint can become the experiment.\n\n— Rapsometeddy",
-        "📱 PHONE-ONLY BUILD EXPERIMENT\n\nPick one problem. Build one feature. Test it. Document failures. Improve the next version.\n\n" + cta + "\n\n#Rapsometeddy #PhoneOnly #AI #Tech",
-        "🧸 PHONE-ONLY EXPERIMENT\n\n📱 Pick one problem\n🛠️ Build one feature\n🧪 Test it\n📝 Document what breaks\n🔁 Improve it\n\nBuild • Learn • Create • Invest 🚀",
-        "0–3s HOOK: “Can I actually build this using only my phone?”\n3–8s GOAL: “One problem. One useful feature.”\n8–18s BUILD: “Build it. Test it. Find what breaks.”\n18–24s LESSON: “The first version needs to work, not be perfect.”\n24–30s CTA: “Follow Rapsometeddy for the experiment.”"
+        title + "\n\n" + goal + "\n\n" + days + "\n\n🎯 The goal is a working experiment, not a perfect app.",
+        title + "\n\n" + days + "\n\nBuild → test → fix → share.\n\n— Rapsometeddy",
+        "📱 " + title.toUpperCase() + "\n\n" + days.replace(/DAY /g, "Day ") + "\n\n" + cta + "\n\n#Rapsometeddy #PhoneOnly #AI #BuildInPublic",
+        "🧸 " + title + "\n\n" + days + "\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s HOOK: “" + goal + "”\n3–8s DAY 1–2: “Pick the problem and smallest feature.”\n8–16s DAY 3–4: “Build it and connect the AI.”\n16–23s DAY 5–6: “Test it and fix what breaks.”\n23–30s DAY 7: “Share the result. Follow Rapsometeddy for the build.”"
       );
     }
 
     if (type === "r0") {
+      const title = "💸 R0 Experiment: Test " + topic;
       return makePackage(
-        "💸 " + idea + "\n\nIf I had R0, I'd prove an idea before spending money.\n\n1️⃣ Use tools I already have.\n2️⃣ Pick one real problem.\n3️⃣ Build the smallest useful version.\n4️⃣ Test it.\n5️⃣ Spend only when the next expense has a clear purpose.\n\n🎯 R0 means using time and attention as the first resources.",
-        "Starting with R0?\n\nDon't start by buying tools.\nStart with a real problem, simple solution, free workflow and real test.\n\nThen spend only when the result justifies it.\n\n— Rapsometeddy",
-        "💸 THE R0 BUILD\n\nUse what you already have. Solve one problem. Build the smallest version. Test it. Then decide what deserves money.\n\n" + cta + "\n\n#Rapsometeddy #R0 #BuildInPublic #Entrepreneurship",
-        "🧸 R0 BUILD PLAN\n\n💡 One real problem\n🛠️ One simple solution\n📱 Tools you already have\n🧪 One real test\n\nLet the result decide the next step.\n\nBuild • Learn • Create • Invest 🚀",
-        "0–3s HOOK: “If I had R0, this is where I'd start.”\n3–10s: “Find one real problem.”\n10–16s: “Build the smallest solution with what you have.”\n16–22s: “Test it before spending money.”\n22–30s CTA: “Follow Rapsometeddy for the R0 build.”"
+        title + "\n\n1️⃣ Find one real problem.\n2️⃣ Create the smallest useful offer.\n3️⃣ Use free tools and what you already have.\n4️⃣ Test it with real people.\n5️⃣ Only spend money when the next expense has a clear purpose.\n\n🎯 Goal: prove demand before investing.",
+        title + "\n\nProblem → offer → test → learn.\n\nDon't spend first. Prove first.\n\n— Rapsometeddy",
+        "💸 R0 EXPERIMENT\n\nProblem → simple offer → free workflow → real test → learn.\n\n" + cta + "\n\n#Rapsometeddy #R0 #Entrepreneurship #BuildInPublic",
+        "🧸 R0 TEST\n\n💡 Problem\n🛠️ Offer\n🆓 Free tools\n🧪 Real test\n📚 Learn\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s HOOK: “Can I test this with R0?”\n3–10s: “Find a real problem and make a simple offer.”\n10–18s: “Use what you already have and test it.”\n18–24s: “Let real results decide what deserves money.”\n24–30s CTA: “Follow Rapsometeddy for the experiment.”"
       );
     }
 
     if (type === "challenge") {
       return makePackage(
-        "🔥 " + idea + "\n\nDAY 1 — Pick one problem.\nDAY 2 — Plan the simplest solution.\nDAY 3 — Build.\nDAY 4 — Test.\nDAY 5 — Fix the biggest problem.\nDAY 6 — Share what you learned.\nDAY 7 — Decide what to build next.\n\n🎯 The goal is a finished experiment, not perfection.",
-        "7-day challenge:\n\nDay 1 problem → Day 2 plan → Day 3 build → Day 4 test → Day 5 fix → Day 6 share → Day 7 reflect.\n\nSeven days of building beats seven days of waiting.\n\n— Rapsometeddy",
-        "🔥 7-DAY BUILD CHALLENGE\n\nProblem → Plan → Build → Test → Fix → Share → Reflect.\n\nFinish the experiment.\n\n" + cta + "\n\n#Rapsometeddy #7DayChallenge #BuildInPublic",
-        "🧸 7-DAY BUILD CHALLENGE\n\n1️⃣ Problem\n2️⃣ Plan\n3️⃣ Build\n4️⃣ Test\n5️⃣ Fix\n6️⃣ Share\n7️⃣ Reflect\n\nBuild • Learn • Create • Invest 🚀",
-        "0–3s: “Give me 7 days and one idea.”\n3–18s: “Problem. Plan. Build. Test. Fix. Share.”\n18–24s: “Day 7: decide what the results taught you.”\n24–30s: “Join the challenge and follow Rapsometeddy.”"
+        "🔥 7-Day Challenge: " + topic + "\n\nDAY 1 — Pick one goal.\nDAY 2 — Make a simple plan.\nDAY 3 — Build or practice.\nDAY 4 — Test.\nDAY 5 — Fix the biggest problem.\nDAY 6 — Share what you learned.\nDAY 7 — Review the result and choose the next step.\n\n🎯 Finish the experiment, not perfection.",
+        "7 days. One goal. One experiment.\n\nPlan → build → test → fix → share → reflect.\n\n— Rapsometeddy",
+        "🔥 7-DAY CHALLENGE\n\n" + topic + "\n\nGoal → plan → build → test → fix → share → reflect.\n\n" + cta + "\n\n#Rapsometeddy #7DayChallenge #BuildInPublic",
+        "🧸 7-DAY CHALLENGE\n\n1️⃣ Goal\n2️⃣ Plan\n3️⃣ Build\n4️⃣ Test\n5️⃣ Fix\n6️⃣ Share\n7️⃣ Reflect\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s: “Give me 7 days and one goal.”\n3–18s: “Plan. Build. Test. Fix. Share.”\n18–24s: “Day 7: review what actually happened.”\n24–30s: “Follow Rapsometeddy for the next experiment.”"
       );
     }
 
-    const master = "💡 " + idea + "\n\nStart with one small problem.\nUse the simplest useful workflow.\nTest the first version.\nLearn from what happens.\nImprove the next version.\n\n🎯 Build something real before trying to make it perfect.";
-    return makePackage(master, idea + "\n\nStart small. Test early. Learn from real results. Improve the next version.\n\nBuild → test → learn → repeat.\n\n— Rapsometeddy", "Keep the first version simple.\n\n1. Start small.\n2. Test early.\n3. Learn from feedback.\n4. Improve the next version.\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI", "🧸 " + idea + "\n\n💡 Start small\n🧪 Test early\n📚 Learn\n🔁 Improve\n\nBuild • Learn • Create • Invest 🚀", "0–3s: “Here's the simple way I'd approach this.”\n3–10s: “Start with one small problem.”\n10–18s: “Build and test the first useful version.”\n18–24s: “Let real results guide the next version.”\n24–30s: “Follow Rapsometeddy for the build.”");
+    if (type === "mistakes") {
+      const facts = contentFacts(topic);
+      return makePackage(
+        "❌ 3 Real Mistakes With " + topic + "\n\n1️⃣ " + facts[0] + "\n2️⃣ " + facts[1] + "\n3️⃣ " + facts[2] + "\n\n💡 Better approach: start small, test early and improve from evidence.",
+        "3 real mistakes with " + topic + ":\n\n1. " + facts[0] + "\n2. " + facts[1] + "\n3. " + facts[2] + "\n\nBetter approach: test before scaling.\n\n— Rapsometeddy",
+        "❌ 3 REAL MISTAKES\n\n" + facts.map((x,i) => (i+1) + "️⃣ " + x).join("\n") + "\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI",
+        "🧸 3 MISTAKES\n\n❌ " + facts[0] + "\n❌ " + facts[1] + "\n❌ " + facts[2] + "\n\n✅ Test. Learn. Improve.",
+        "0–3s: “3 mistakes to avoid with " + topic + ".”\n3–8s: “Mistake #1: " + facts[0] + "”\n8–13s: “Mistake #2: " + facts[1] + "”\n13–18s: “Mistake #3: " + facts[2] + "”\n18–30s: “Test first. Scale later. Follow Rapsometeddy.”"
+      );
+    }
+
+    if (type === "myth") {
+      return makePackage(
+        "🧠 Myth vs Reality: " + topic + "\n\nMYTH: You need a huge budget, perfect skills or a massive setup before starting.\n\nREALITY: A small, useful first experiment can reveal what actually needs improving.\n\n🎯 Start with the smallest test that can teach you something.",
+        "Myth: you need everything figured out before starting " + topic + ".\n\nReality: start with a small test and let evidence guide the next version.\n\n— Rapsometeddy",
+        "🧠 MYTH vs REALITY\n\nMYTH: You need a perfect setup.\nREALITY: You need a useful experiment.\n\n" + cta + "\n\n#Rapsometeddy #Tech #AI",
+        "🧸 MYTH vs REALITY\n\n❌ Perfect setup first\n✅ Small experiment first\n\nBuild • Learn • Create • Invest 🚀",
+        "0–3s: “Think you need a perfect setup?”\n3–12s MYTH: “Everything must be ready first.”\n12–22s REALITY: “Start small and learn from the test.”\n22–30s CTA: “Follow Rapsometeddy.”"
+      );
+    }
+
+    const facts = contentFacts(topic);
+    const title = type === "build" ? "🛠️ Step-by-Step Build: " + topic
+      : type === "lessons" ? "📝 What I Learned From " + topic
+      : "💡 Beginner Guide: " + topic;
+
+    return makePackage(
+      title + "\n\n1️⃣ Start with one small problem.\n2️⃣ Use the simplest useful workflow.\n3️⃣ Build the first version.\n4️⃣ Test it with real use.\n5️⃣ Learn and improve.\n\n🎯 Build something real before trying to make it perfect.",
+      title + "\n\nStart small → build → test → learn → improve.\n\n— Rapsometeddy",
+      "💡 " + title.toUpperCase() + "\n\nStart small. Build. Test. Learn. Improve.\n\n" + cta + "\n\n#Rapsometeddy #BuildInPublic #Tech #AI",
+      "🧸 " + title + "\n\n1️⃣ Start small\n2️⃣ Build\n3️⃣ Test\n4️⃣ Learn\n5️⃣ Improve\n\nBuild • Learn • Create • Invest 🚀",
+      "0–3s: “Here's how I'd start " + topic + ".”\n3–10s: “Pick one small problem.”\n10–18s: “Build and test the first version.”\n18–24s: “Learn from what happens.”\n24–30s: “Follow Rapsometeddy for the build.”"
+    );
   }
 
   function makePackage(master, xVersion, instagram, telegram, short) {
@@ -622,7 +652,7 @@ Published: ${counts.Published || 0}`);
 
       const options = builders[archetype] || builders.guide;
       const idea = options[Math.floor(Date.now() / 86400000) % options.length];
-      const draftContent = contentPackage(idea);
+      const draftContent = contentPackage(idea, archetype, topic);
 
       if (!dbEnabled()) {
         return send(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
