@@ -848,7 +848,7 @@ Published: ${counts.Published || 0}`);
     try {
       const r = await fetch(sportsUrl, { headers: { accept: "application/json" } });
       const data = await r.json().catch(() => null);
-      if (!r.ok || !data?.ok) return send(chat.id, "⚽ Sports analytics is temporarily unavailable.\\n\\n" + (data?.error || ("HTTP " + r.status)));
+      if (!r.ok || !data?.ok) return send(chat.id, "⚽ Sports analytics is temporarily unavailable.\\n\\n" + (typeof data?.error === "string" ? data.error : JSON.stringify(data?.error || ("HTTP " + r.status))));
       const a = data.analytics || {};
       const pct = n => Math.round((Number(n) || 0) * 100);
       const top = (a.topTeams || []).slice(0, 5).map((t, i) => `${i + 1}. ${t.name} — ${t.points} pts • ${t.ppg} PPG • GD ${t.goalDiff > 0 ? "+" : ""}${t.goalDiff}`).join("\\n");
