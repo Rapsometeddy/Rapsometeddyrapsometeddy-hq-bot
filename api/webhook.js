@@ -54,6 +54,26 @@ async function dbRequest(path, options = {}) {
   return r.status === 204 ? [] : r.json();
 }
 
+function integrationStatus() {
+  return {
+    telegram: Boolean(BOT_TOKEN),
+    supabase: dbEnabled(),
+    telegramChannel: Boolean(CHANNEL_ID),
+    x: Boolean(process.env.X_BEARER_TOKEN || process.env.X_API_KEY || process.env.X_ACCESS_TOKEN),
+    meta: Boolean(process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_PAGE_ACCESS_TOKEN),
+    instagram: Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+  };
+}
+
+async function draftCounts(chatId) {
+  if (!dbEnabled()) return {};
+  const rows = await listDrafts(chatId, 100);
+  return rows.reduce((acc, d) => {
+    acc[d.status] = (acc[d.status] || 0) + 1;
+    return acc;
+  }, {});
+}
+
 function dbEnabled() {
   return Boolean(SUPABASE_URL && SUPABASE_KEY);
 }
@@ -291,7 +311,7 @@ ${rest}`;
 /drafts — show saved drafts
 /approve <id> — approve a draft
 /queue <id> — queue a draft
-/publish <id> — publish a draft now`);
+/publish <id> — publish a draft now\n/status — connection & draft status`);
   }
 
   function contentDraft(idea, format) {
