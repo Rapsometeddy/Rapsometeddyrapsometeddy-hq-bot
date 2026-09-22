@@ -245,6 +245,33 @@ function dbEnabled() {
   return Boolean(SUPABASE_URL && SUPABASE_KEY);
 }
 
+async function getClientProfile(userId) {
+  if (!dbEnabled() || !userId) return null;
+  const rows = await dbRequest('client_profiles?telegram_user_id=eq.' + encodeURIComponent(userId) + '&limit=1&select=*');
+  return rows?.[0] || null;
+}
+async function upsertClientProfile(user, chatId, patch = {}) {
+  if (!dbEnabled() || !user?.id) return null;
+  const existing = await getClientProfile(user.id);
+  const row = { telegram_user_id:user.id, telegram_chat_id:chatId, username:user.username || existing?.username || null, first_name:user.first_name || existing?.first_name || null, ...(existing || {}), ...(patch || {}), updated_at:new Date().toISOString() };
+  const rows = await dbRequest('client_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(row)});
+  return rows?.[0] || null;
+}
+async function updateClientProfile(userId, patch = {}) {
+  if (!dbEnabled() || !userId) return false;
+  const rows = await dbRequest('client_profiles?telegram_user_id=eq.' + encodeURIComponent(userId),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({...patch,updated_at:new Date().toISOString()})});
+  return Boolean(rows?.length);
+}
+async function handleClientSetup(chat,user,text) {
+  if (chat.type !== 'private' || !user || !dbEnabled()) return false;
+  let p = await getClientProfile(user.id);
+  if (!p) { await upsertClientProfile(user,chat.id,{onboarding_step:'business_name'}); await send(chat.id,'👋 Welcome to Rapsometeddy Content Machine!\n\n1/3 What is your business name?'); return true; }
+  if (p.onboarding_step === 'business_name' && text && !text.startsWith('/')) { await updateClientProfile(user.id,{business_name:text.trim(),onboarding_step:'business_type'}); await send(chat.id,'2/3 What type of business is it?\n\nExample: Barber, salon, restaurant, clothing store.'); return true; }
+  if (p.onboarding_step === 'business_type' && text && !text.startsWith('/')) { await updateClientProfile(user.id,{business_type:text.trim(),onboarding_step:'business_goal'}); await send(chat.id,'3/3 What should your content help you achieve?\n\nExample: More bookings, more orders, promote a special.'); return true; }
+  if (p.onboarding_step === 'business_goal' && text && !text.startsWith('/')) { await updateClientProfile(user.id,{business_goal:text.trim(),onboarding_step:'ready'}); await send(chat.id,'✅ Business profile complete!\n\nUse /help to see your client controls.'); return true; }
+  return false;
+}
+
 async function saveDraft(chatId, userId, format, idea, content) {
   if (!dbEnabled()) return null;
   const rows = await dbRequest("content_drafts", {
@@ -330,6 +357,8 @@ async function handleMessage(msg) {
 
 Use /help to see what the bot can do.`);
   }
+
+  if (chat.type === 'private' && user && (text.trim() === '/start' || !text.trim().startsWith('/'))) { if (await handleClientSetup(chat,user,text.trim())) return; }
 
   if (text.trim().match(/^\/render(?:@\w+)?\b/i)) {
     const topic = args(text) || "Create a cinematic Rapsometeddy AI, tech and entrepreneurship short.";
@@ -1116,6 +1145,12 @@ ${draftContent}
 ⚠️ Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel to make drafts permanent.`);
     }
 
+    if (cmd === "/profile") {
+      if (chat.type !== "private") return send(chat.id, "Client profile is available in private chat.");
+      const p = await getClientProfile(user?.id);
+      if (!p) return send(chat.id, "Use /start first.");
+      return send(chat.id, "🏪 BUSINESS PROFILE\n\nName: " + (p.business_name || "—") + "\nType: " + (p.business_type || "—") + "\nGoal: " + (p.business_goal || "—") + "\n\nUsage: " + (p.posts_used || 0) + "/" + (p.posts_limit || 10));
+    }
     if (cmd === "/drafts") {
       if (!dbEnabled()) return send(chat.id, "📭 Persistent storage isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
       const list = await listDrafts(chat.id, 10);
