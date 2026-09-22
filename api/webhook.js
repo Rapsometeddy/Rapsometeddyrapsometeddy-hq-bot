@@ -38,7 +38,7 @@ async function send(chatId, text, extra = {}) {
 }
 
 async function dbRequest(path, options = {}) {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
