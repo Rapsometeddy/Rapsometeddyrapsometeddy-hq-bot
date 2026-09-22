@@ -29,12 +29,11 @@ Never put BOT_TOKEN or WEBHOOK_SECRET in GitHub.
 1. Add the bot to your group as an administrator.
 2. Give it permission to delete messages, restrict members, ban users and pin messages.
 3. Add the bot to the channel as an administrator with permission to post.
-4. Set the Telegram webhook to:
-
-https://YOUR-VERCEL-DOMAIN.vercel.app/api/webhook?token=YOUR-WEBHOOK-SECRET
-
+4. Open your Vercel production domain followed by `/api/webhook` to register the webhook.
 5. Test /start, /help and /id.
 
 ## Important
 
 The current V1 keeps welcome/rules settings in memory. Vercel serverless instances can restart, so these settings are not permanent yet. A later V2 can add a database for persistent settings and warning counts.
+
+Deployment trigger: September 22, 2026.
