@@ -686,10 +686,45 @@ Published: ${counts.Published || 0}`);
     return packageText;
   }
 
-  const contentCmd = /^(\/auto|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
+  const contentCmd = /^(\/auto|\/media|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
   if (contentCmd) {
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
+
+    if (cmd === "/media") {
+      const id = Number(rest);
+      if (!Number.isInteger(id) || id <= 0) return send(chat.id, "Usage: /media <draft_id>\\nExample: /media 13");
+
+      if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet.");
+
+      const draft = await getDraft(id);
+      if (!draft) return send(chat.id, "❌ Draft #" + id + " was not found.");
+
+      const mediaText = [
+        "🎬 RAPSOMETTEDY MEDIA JOB #" + id,
+        "",
+        "Status: READY FOR GENERATION",
+        "",
+        "🖼️ IMAGES",
+        "Use the IMAGE PROMPTS from this draft to generate the 7 vertical 9:16 scenes.",
+        "",
+        "🎥 VIDEO",
+        "Animate the 7 scenes using the VIDEO SHOT LIST. Target about 4 seconds per scene.",
+        "",
+        "🎵 MUSIC",
+        "Use the MUSIC DIRECTION from this draft as the soundtrack brief.",
+        "",
+        "🎙️ VOICEOVER",
+        "Use the VOICEOVER section as the narration brief.",
+        "",
+        "📱 FINAL FORMAT",
+        "9:16 vertical • approximately 30 seconds • captions/subtitles recommended",
+        "",
+        "⚠️ This version creates the complete media-production job. It does not claim to generate AI media files automatically yet; that requires a connected generation service/model."
+      ].join("\\n");
+
+      return sendLong(chat.id, mediaText);
+    }
 
     if (cmd === "/auto") {
       const topic = rest || "Rapsometeddy";
