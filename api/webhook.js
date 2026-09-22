@@ -603,29 +603,74 @@ Published: ${counts.Published || 0}`);
 
   function visualPackage(topic, type) {
     const v = topic.toLowerCase();
-    const subject = v.includes("ai") ? "AI-powered" : "tech";
     const style = "cinematic futuristic Rapsometeddy aesthetic, dark tech workspace, subtle glowing accents, realistic smartphone, clean composition, vertical 9:16, no logos, no readable text";
-    const prompts = type === "phone"
-      ? [
-          "Rapsometeddy planning an app idea on a Samsung-style smartphone, " + style,
-          "close-up smartphone showing a simple app wireframe and feature plan, " + style,
-          "phone-only development workflow with code and app interface visible on screen, " + style,
-          "AI connection concept flowing from a smartphone into a glowing neural interface, " + style,
-          "hands testing a mobile app on a phone, bug indicators and test notes, " + style,
-          "developer fixing a mobile app on a phone with a focused late-night workspace, " + style,
-          "finished mobile app demo on a smartphone, confident creator presenting the result, " + style
-        ]
-      : [
-          "Rapsometeddy exploring " + topic + " in a futuristic tech workspace, " + style,
-          "visual metaphor for the main problem behind " + topic + ", " + style,
-          "simple first version of a " + subject + " project on a smartphone, " + style,
-          "testing and improving a small digital project, " + style,
-          "finished project being presented by Rapsometeddy, " + style
-        ];
-    const shots = prompts.map((p,i) => (i+1) + ". SHOT " + (i+1) + "\nIMAGE PROMPT: " + p + "\nMOTION: slow push-in with subtle parallax\nDURATION: " + (type === "phone" ? "4s" : "5s"));
-    return "🖼️ IMAGE PROMPTS\n\n" + shots.map(x => x.split("\nMOTION")[0]).join("\n\n") +
+
+    let prompts;
+    if (type === "phone") {
+      prompts = [
+        "creator planning the app problem and writing a simple idea map on a smartphone",
+        "close-up of a smartphone displaying a clean app wireframe with one core feature highlighted",
+        "phone-only coding workflow with a compact editor and app preview visible on the screen",
+        "AI connection visual: smartphone linked to a glowing neural network through flowing data",
+        "creator testing the app on a smartphone with a few subtle bug markers",
+        "late-night phone workspace showing debugging and a small fix being made",
+        "finished mobile app demo on a smartphone with the creator presenting the result"
+      ];
+    } else if (type === "r0") {
+      prompts = [
+        "creator starting a zero-budget business experiment with only a smartphone and notebook",
+        "simple problem research and customer idea validation on a smartphone",
+        "free digital tools arranged around a smartphone with a zero-budget experiment theme",
+        "creator testing a simple offer with no paid advertising",
+        "first small result from a zero-budget business experiment",
+        "creator reviewing what worked and what failed using a smartphone",
+        "small zero-budget project reaching its first meaningful result"
+      ];
+    } else if (type === "challenge") {
+      prompts = [
+        "creator announcing a seven-day build challenge with a smartphone and notebook",
+        "day-one planning board with one clear goal",
+        "mid-challenge creator building and testing a small digital project",
+        "progress montage showing several stages of a phone-based build",
+        "creator solving a problem during the challenge",
+        "final testing session before the challenge deadline",
+        "finished challenge result presented confidently on a smartphone"
+      ];
+    } else {
+      prompts = [
+        "creator exploring the main problem behind the topic on a smartphone",
+        "simple visual breakdown of the core idea with clean digital cards",
+        "small first version of the project being built on a smartphone",
+        "creator testing the project and studying the result",
+        "finished project being presented by the creator"
+      ];
+    }
+
+    const fullPrompts = prompts.map(p => p + ", " + style);
+    const shots = fullPrompts.map((p,i) => {
+      const motions = [
+        "slow push-in with subtle parallax",
+        "gentle left-to-right camera drift",
+        "slow tilt toward the phone screen",
+        "subtle forward zoom with animated light movement",
+        "gentle handheld-style micro movement",
+        "slow push-in with subtle screen glow",
+        "smooth reveal from phone to creator"
+      ];
+      return (i+1) + ". SHOT " + (i+1) + "\nIMAGE PROMPT: " + p + "\nMOTION: " + motions[i % motions.length] + "\nDURATION: " + (type === "phone" ? "4s" : "5s");
+    });
+
+    const music = type === "phone"
+      ? "🎵 MUSIC DIRECTION\nFuturistic melodic trap / chill hip-hop. 90–100 BPM. Dark synths, warm bass, light percussion, gradual build from Day 1 to Day 7. No vocals needed."
+      : "🎵 MUSIC DIRECTION\nModern cinematic hip-hop / electronic beat. 90–105 BPM. Clean bass, subtle synths, steady build, energetic final section. No vocals needed.";
+
+    const voice = "🎙️ VOICEOVER\nUse a confident, conversational Rapsometeddy delivery. Keep sentences short, energetic and easy to subtitle. Hook first, then explain the experiment, then finish with a clear follow/next-step CTA.";
+
+    return "🖼️ IMAGE PROMPTS\n\n" + fullPrompts.map((p,i) => (i+1) + ". " + p).join("\n\n") +
       "\n\n━━━━━━━━━━━━━━━━━━\n🎬 VIDEO SHOT LIST\n━━━━━━━━━━━━━━━━━━\n\n" +
       shots.join("\n\n") +
+      "\n\n━━━━━━━━━━━━━━━━━━\n" + music +
+      "\n\n━━━━━━━━━━━━━━━━━━\n" + voice +
       "\n\n🎨 VISUAL STYLE\n" + style +
       "\n\n📐 FORMAT\n9:16 vertical • short-form video • phone-friendly";
   }
