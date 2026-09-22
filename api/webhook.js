@@ -79,41 +79,74 @@ async function sendMediaAudio(chatId, url, caption = "") {
   });
 }
 
-async function renderSlideshow(imageUrls, audioUrl, outputPath) {
+async function fetchMediaBuffer(url, label) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(label + " download failed (" + r.status + ")");
+  const contentType = r.headers.get("content-type") || "";
+  const buffer = Buffer.from(await r.arrayBuffer());
+  if (!buffer.length) throw new Error(label + " download returned an empty file");
+  return { buffer, contentType };
+}
+
+async function renderSlideshow(imageAssets, audioAsset, outputPath) {
   const fs = require("fs"), os = require("os"), path = require("path");
   const { spawn } = require("child_process");
   const ffmpegPath = require("ffmpeg-static");
   if (!ffmpegPath) throw new Error("FFmpeg binary unavailable");
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rapsometeddy-media-"));
   const imagePaths = [];
-  for (let i = 0; i < imageUrls.length; i++) {
-    const r = await fetch(imageUrls[i]);
-    if (!r.ok) throw new Error("Could not download image " + (i + 1));
-    const p = path.join(dir, "scene-" + String(i).padStart(2, "0") + ".jpg");
-    fs.writeFileSync(p, Buffer.from(await r.arrayBuffer()));
-    imagePaths.push(p);
+  try {
+    for (let i = 0; i < imageAssets.length; i++) {
+      const ext = String(imageAssets[i].contentType || "").includes("png") ? ".png" : ".jpg";
+      const p = path.join(dir, "scene-" + String(i).padStart(2, "0") + ext);
+      fs.writeFileSync(p, imageAssets[i].buffer);
+      imagePaths.push(p);
+    }
+
+    const audioExt = String(audioAsset.contentType || "").includes("wav") ? ".wav" : ".mp3";
+    const audioPath = path.join(dir, "voiceover" + audioExt);
+    fs.writeFileSync(audioPath, audioAsset.buffer);
+
+    const listPath = path.join(dir, "images.txt");
+    const concat = imagePaths.map(p =>
+      "file '" + p.replace(/'/g, "'\\''") + "'\\nduration 4"
+    ).join("\\n") + "\\nfile '" +
+      imagePaths[imagePaths.length - 1].replace(/'/g, "'\\''") + "'";
+    fs.writeFileSync(listPath, concat);
+
+    await new Promise((resolve, reject) => {
+      const proc = spawn(ffmpegPath, [
+        "-y",
+        "-f", "concat", "-safe", "0", "-i", listPath,
+        "-i", audioPath,
+        "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
+        "-r", "30",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
+        "-c:a", "aac", "-b:a", "128k",
+        "-shortest", "-movflags", "+faststart",
+        outputPath
+      ]);
+
+      let stderr = "";
+      proc.stderr.on("data", d => { stderr += d.toString(); });
+      proc.on("error", reject);
+      proc.on("close", code => {
+        if (code === 0) return resolve();
+        reject(new Error("FFmpeg failed (exit " + code + "): " + stderr.slice(-1600)));
+      });
+    });
+
+    return outputPath;
+  } finally {
+    for (const p of imagePaths) {
+      try { fs.unlinkSync(p); } catch {}
+    }
+    try { fs.unlinkSync(path.join(dir, "voiceover.mp3")); } catch {}
+    try { fs.unlinkSync(path.join(dir, "voiceover.wav")); } catch {}
+    try { fs.unlinkSync(path.join(dir, "images.txt")); } catch {}
+    try { fs.rmdirSync(dir); } catch {}
   }
-  const ar = await fetch(audioUrl);
-  if (!ar.ok) throw new Error("Could not download voiceover");
-  const audioPath = path.join(dir, "voiceover.mp3");
-  fs.writeFileSync(audioPath, Buffer.from(await ar.arrayBuffer()));
-  const listPath = path.join(dir, "images.txt");
-  const concat = imagePaths.map(p => "file '" + p.replace(/'/g, "'\\''") + "'\nduration 4").join("\n") +
-    "\nfile '" + imagePaths[imagePaths.length - 1].replace(/'/g, "'\\''") + "'";
-  fs.writeFileSync(listPath, concat);
-  await new Promise((resolve, reject) => {
-    const proc = spawn(ffmpegPath, [
-      "-y","-f","concat","-safe","0","-i",listPath,"-i",audioPath,
-      "-vf","scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
-      "-r","30","-c:v","libx264","-preset","veryfast","-crf","28",
-      "-c:a","aac","-b:a","128k","-shortest","-movflags","+faststart",outputPath
-    ]);
-    let stderr = "";
-    proc.stderr.on("data", d => { stderr += d.toString(); });
-    proc.on("error", reject);
-    proc.on("close", code => code === 0 ? resolve() : reject(new Error("FFmpeg failed: " + stderr.slice(-1200))));
-  });
-  return outputPath;
 }
 
 async function sendLocalVideo(chatId, filePath, caption = "") {
@@ -816,21 +849,50 @@ Published: ${counts.Published || 0}`);
       const voiceText = "Can I build a useful AI app using only a phone? Day one: choose one real problem. Day two: design the smallest useful feature. Day three: build the first version. Day four: connect the AI. Day five: test it. Day six: fix what breaks. Day seven: share the result. Build, test, fix, share.";
       const audioUrl = pollinationsUrl("audio", voiceText, { voice: "nova" });
 
-      const audioSent = await sendMediaAudio(chat.id, audioUrl, "🎙️ Rapsometeddy voiceover");
       const imageUrls = prompts.map(prompt => pollinationsUrl("image", prompt, {
         model: "flux", width: "720", height: "1280",
         nologo: "true", private: "true", safe: "true"
       }));
 
-      await send(chat.id, "🎬 Assembling the 7 scenes into one 9:16 MP4...");
+      // Download the exact generated assets once. The renderer uses these same bytes,
+      // instead of requesting the Pollinations URLs a second time.
+      const imageAssets = [];
+      let assetError = "";
+      for (let i = 0; i < imageUrls.length; i++) {
+        try {
+          imageAssets.push(await fetchMediaBuffer(imageUrls[i], "Scene " + (i + 1)));
+        } catch (e) {
+          assetError = String(e?.message || e);
+          break;
+        }
+      }
+
+      const audioAssetResult = await fetchMediaBuffer(audioUrl, "Voiceover").catch(e => ({
+        error: String(e?.message || e)
+      }));
+
+      const audioSent = await sendMediaAudio(chat.id, audioUrl, "🎙️ Rapsometeddy voiceover");
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const sent = await sendMediaPhoto(chat.id, imageUrls[i], "🎨 Rapsometeddy scene " + (i + 1) + "/" + prompts.length);
+        if (!sent.ok) {
+          await send(chat.id, "⚠️ Scene " + (i + 1) + " could not be delivered.");
+        }
+      }
+
+      await send(chat.id, "🎬 Assembling the exact generated scenes into one 9:16 MP4...");
       const fs = require("fs"), path = require("path");
       const outputPath = path.join("/tmp", "rapsometeddy-draft-" + id + "-" + Date.now() + ".mp4");
       let finalSent = { ok:false }, renderError = "";
+
       try {
-        await renderSlideshow(imageUrls, audioUrl, outputPath);
+        if (assetError) throw new Error(assetError);
+        if (audioAssetResult.error) throw new Error(audioAssetResult.error);
+        await renderSlideshow(imageAssets, audioAssetResult, outputPath);
         finalSent = await sendLocalVideo(chat.id, outputPath, "🎬 Rapsometeddy final short — draft #" + id);
       } catch (e) {
         renderError = String(e?.message || e);
+        console.error("Media render error:", renderError);
       } finally {
         try { fs.unlinkSync(outputPath); } catch {}
       }
