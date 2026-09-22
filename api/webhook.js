@@ -256,11 +256,32 @@ Build • Learn • Create • Invest`);
     if (chat.type === "channel") {
       const ok = await setConfiguredChannelId(chat.id);
       return ok
-        ? send(chat.id, "✅ This channel is now connected as Rapsometeddy HQ.\n\nContent Machine publishing will use this channel.")
+        ? send(chat.id, "✅ This channel is now connected as Rapsometeddy HQ.\\n\\nContent Machine publishing will use this channel.")
         : send(chat.id, "❌ I couldn't save this channel connection.");
     }
+
+    // Private-channel friendly binding: reply to a forwarded post from the private HQ channel.
+    // This avoids requiring a /bindchannel command to be sent inside the channel.
+    const forwarded = msg.reply_to_message?.forward_origin?.chat || msg.reply_to_message?.forward_from_chat;
+    if (chat.type === "private" && forwarded?.id && forwarded.type === "channel") {
+      const me = await tg("getMe");
+      if (!me.ok) return send(chat.id, "❌ I couldn't verify the bot account.");
+      const member = await tg("getChatMember", { chat_id: forwarded.id, user_id: me.result.id });
+      if (!member.ok || !isAdmin(member.result)) {
+        return send(chat.id, "❌ I found the channel, but I am not an administrator there. Add @RapsometeddyHQBot as a channel admin, then try /bindchannel again.");
+      }
+      const ok = await setConfiguredChannelId(forwarded.id);
+      return ok
+        ? send(chat.id, "✅ Private HQ channel connected!\\n\\nPublishing will now go to that channel.")
+        : send(chat.id, "❌ I found the channel but couldn't save the connection.");
+    }
+
+    if (chat.type === "private") {
+      return send(chat.id, "📡 To connect your private HQ channel:\\n1. Forward any post from the HQ channel to me.\\n2. Reply to that forwarded post with /bindchannel.\\n\\nMake sure @RapsometeddyHQBot is an administrator in the channel.");
+    }
+
     if (!user || !(await requireAdmin(chat.id, user.id))) return send(chat.id, "⛔ Admins only.");
-    return send(chat.id, "📡 To connect the HQ channel, post /bindchannel inside the HQ channel itself. The bot must be an admin there.");
+    return send(chat.id, "📡 Post /bindchannel inside the HQ channel itself. The bot must be an admin there.");
   }
 
   const adminCmd = /^(\/announce|\/pin|\/warn|\/unwarn|\/mute|\/unmute|\/ban|\/unban|\/welcome|\/setrules)(?:@\w+)?\b/i.exec(text);
