@@ -1,6 +1,8 @@
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const API = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : "";
 
@@ -31,6 +33,80 @@ function args(text = "") {
 
 async function send(chatId, text, extra = {}) {
   return tg("sendMessage", { chat_id: chatId, text, ...extra });
+}
+
+async function dbRequest(path, options = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    console.error("Supabase error:", r.status, body);
+    return null;
+  }
+  return r.status === 204 ? [] : r.json();
+}
+
+function dbEnabled() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function saveDraft(chatId, userId, format, idea, content) {
+  if (!dbEnabled()) return null;
+  const rows = await dbRequest("content_drafts", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ chat_id: chatId, user_id: userId || null, format, idea, content, status: "Draft" })
+  });
+  return rows?.[0] || null;
+}
+
+async function listDrafts(chatId, limit = 10) {
+  if (!dbEnabled()) return [];
+  return (await dbRequest(`content_drafts?chat_id=eq.${encodeURIComponent(chatId)}&order=id.desc&limit=${limit}&select=*`)) || [];
+}
+
+async function getDraft(chatId, number) {
+  if (!dbEnabled()) return null;
+  const rows = await dbRequest(`content_drafts?chat_id=eq.${encodeURIComponent(chatId)}&order=id.asc&limit=100&select=*`);
+  return rows?.[number - 1] || null;
+}
+
+async function setDraftStatus(id, status) {
+  if (!dbEnabled()) return false;
+  const rows = await dbRequest(`content_drafts?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      status,
+      updated_at: new Date().toISOString(),
+      ...(status === "Published" ? { published_at: new Date().toISOString() } : {})
+    })
+  });
+  return Boolean(rows?.length);
+}
+
+async function publishDraft(chatId, draft) {
+  const destination = CHANNEL_ID || chatId;
+  const r = await send(destination, `🧸 Rapsometeddy HQ\n\n${draft.content}`);
+  if (r.ok && dbEnabled()) {
+    await setDraftStatus(draft.id, "Published");
+    if (draft.id) {
+      await dbRequest(`content_drafts?id=eq.${encodeURIComponent(draft.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ telegram_message_id: r.result?.message_id || null })
+      });
+    }
+  }
+  return r;
 }
 
 const defaultRules = `🧸 Rapsometeddy HQ Community Rules
@@ -215,8 +291,6 @@ ${rest}`;
 /published <number> — mark it published`);
   }
 
-  if (!globalThis.__rtContentDrafts) globalThis.__rtContentDrafts = [];
-
   function contentDraft(idea, format) {
     const templates = {
       post: `HOOK: ${idea}
@@ -253,43 +327,64 @@ CTA: Save this and follow Rapsometeddy for more.`,
       return send(chat.id, `💡 Content ideas
 
 1. 5 useful AI tools for students
-2. How to build an app from a phone
+2. How to build an app using only a phone
 3. GitHub basics for beginners
 4. Realistic online business ideas
 5. AI + music for independent creators
-6. What I learned building Rapsometeddy HQ`);
+6. What I learned building Rapsometeddy HQ
+7. How to automate a Telegram community
+8. Free tools every new creator should know`);
     }
 
     if (cmd === "/create" || cmd === "/thread" || cmd === "/short") {
       if (!rest) return send(chat.id, `Usage: ${cmd} Your content idea`);
       const format = cmd === "/create" ? "post" : cmd.slice(1);
-      const draft = { format, idea: rest, content: contentDraft(rest, format), status: "Draft", created: Date.now() };
-      globalThis.__rtContentDrafts.unshift(draft);
-      const n = globalThis.__rtContentDrafts.length;
-      return send(chat.id, `📝 Draft #${n} created
+      const draftContent = contentDraft(rest, format);
 
-${draft.content}
+      if (dbEnabled()) {
+        const saved = await saveDraft(chat.id, user?.id, format, rest, draftContent);
+        if (!saved) return send(chat.id, "⚠️ I couldn't save that draft. Check the Content Machine database setup.");
+        return send(chat.id, `📝 Draft #${saved.id} created and saved permanently.
 
-Use /approve ${n} or /queue ${n}.`);
+${draftContent}
+
+Status: Draft
+Use /approve ${saved.id}, /queue ${saved.id}, or /published ${saved.id}.`);
+      }
+
+      return send(chat.id, `📝 Draft created, but persistent storage is not connected yet.
+
+${draftContent}
+
+⚠️ Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel to make drafts permanent.`);
     }
 
     if (cmd === "/drafts") {
-      const list = globalThis.__rtContentDrafts;
-      if (!list.length) return send(chat.id, "📭 No drafts in this bot instance yet. Try /create Your idea");
-      return send(chat.id, list.slice(0, 10).map((d, i) => `#${i + 1} [${d.status}] ${d.idea}`).join("\n"));
+      if (!dbEnabled()) return send(chat.id, "📭 Persistent storage isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
+      const list = await listDrafts(chat.id, 10);
+      if (!list.length) return send(chat.id, "📭 No saved drafts yet. Try /create Your idea");
+      return send(chat.id, list.map(d => `#${d.id} [${d.status}] ${d.idea}`).join("\n"));
     }
 
     if (["/approve", "/queue", "/published"].includes(cmd)) {
+      if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
       const match = rest.match(/^(\d+)/);
       if (!match) return send(chat.id, `Usage: ${cmd} <draft number>`);
-      const index = Number(match[1]) - 1;
-      const d = globalThis.__rtContentDrafts[index];
-      if (!d) return send(chat.id, "❌ Draft not found.");
-      d.status = cmd === "/approve" ? "Approved" : cmd === "/queue" ? "Queued" : "Published";
-      return send(chat.id, `✅ Draft #${index + 1} marked ${d.status}.`);
+      const id = Number(match[1]);
+      const status = cmd === "/approve" ? "Approved" : cmd === "/queue" ? "Queued" : "Published";
+      const draft = await getDraft(chat.id, id);
+      if (!draft) return send(chat.id, "❌ Draft not found.");
+      
+      if (status === "Published") {
+        const r = await publishDraft(chat.id, draft);
+        return send(chat.id, r.ok ? `🚀 Draft #${id} published.` : `❌ Could not publish: ${r.description || "unknown Telegram error"}`);
+      }
+
+      const ok = await setDraftStatus(draft.id, status);
+      return send(chat.id, ok ? `✅ Draft #${id} marked ${status}.` : "❌ Could not update that draft.");
     }
   }
-  
+
   if (chat.type !== "private" && /(https?:\/\/|t\.me\/|www\.)/i.test(text)) {
     if (user && !(await requireAdmin(chat.id, user.id))) {
       await tg("deleteMessage", { chat_id: chat.id, message_id: msg.message_id });
