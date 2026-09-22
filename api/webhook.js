@@ -418,7 +418,7 @@ CTA: Save this and follow Rapsometeddy for more.`,
     return typeof template === "function" ? template(idea) : templates.post(idea);
   }
 
-  const contentCmd = /^(\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
+  const contentCmd = /^(\/auto|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
   if (contentCmd) {
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
