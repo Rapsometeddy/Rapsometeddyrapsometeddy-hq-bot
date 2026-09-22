@@ -1,7 +1,7 @@
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const CHANNEL_ID = process.env.CHANNEL_ID || "";
-const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\\/$/, "");
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_KEY = SUPABASE_SECRET_KEY || SUPABASE_SERVICE_ROLE_KEY;
