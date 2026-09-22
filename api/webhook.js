@@ -60,6 +60,25 @@ async function sendMediaPhoto(chatId, url, caption = "") {
   return tg("sendPhoto", { chat_id: chatId, photo: url, ...(caption ? { caption } : {}) });
 }
 
+async function sendMediaVideo(chatId, url, caption = "") {
+  return tg("sendVideo", {
+    chat_id: chatId,
+    video: url,
+    supports_streaming: true,
+    ...(caption ? { caption } : {})
+  });
+}
+
+async function sendMediaAudio(chatId, url, caption = "") {
+  return tg("sendAudio", {
+    chat_id: chatId,
+    audio: url,
+    title: "Rapsometeddy Voiceover",
+    performer: "Rapsometeddy",
+    ...(caption ? { caption } : {})
+  });
+}
+
 function pollinationsUrl(kind, prompt, params = {}) {
   const base = "https://gen.pollinations.ai/" + kind + "/" + encodeURIComponent(prompt);
   const q = new URLSearchParams(params);
@@ -750,12 +769,40 @@ Published: ${counts.Published || 0}`);
       const voiceText = "Can I build a useful AI app using only a phone? Day one: choose one real problem. Day two: design the smallest useful feature. Day three: build the first version. Day four: connect the AI. Day five: test it. Day six: fix what breaks. Day seven: share the result. Build, test, fix, share.";
       const audioUrl = pollinationsUrl("audio", voiceText, { voice: "nova" });
 
+      // Telegram can fetch media directly from a public HTTP URL. Send the
+      // generated Pollinations video/audio instead of exposing their URLs.
+      const videoSent = await sendMediaVideo(
+        chat.id,
+        videoUrl,
+        "🎥 Rapsometeddy generated video — draft #" + id
+      );
+
+      if (!videoSent.ok) {
+        await send(chat.id,
+          "⚠️ The video was generated but Telegram could not fetch it. " +
+          (videoSent.description || "Try again in a moment.")
+        );
+      }
+
+      const audioSent = await sendMediaAudio(
+        chat.id,
+        audioUrl,
+        "🎙️ Rapsometeddy voiceover"
+      );
+
+      if (!audioSent.ok) {
+        await send(chat.id,
+          "⚠️ The voiceover was generated but Telegram could not fetch it. " +
+          (audioSent.description || "Try again in a moment.")
+        );
+      }
+
       return sendLong(chat.id,
-        "✅ Media Engine started for draft #" + id + ".\\n\\n" +
-        "🖼️ " + prompts.length + " image scenes sent above.\\n\\n" +
-        "🎥 VIDEO\\n" + videoUrl + "\\n\\n" +
-        "🎙️ VOICEOVER\\n" + audioUrl + "\\n\\n" +
-        "⚠️ Video/audio generation availability depends on the Pollinations account/model and current usage limits. Keep the API key in Vercel Environment Variables, never in GitHub."
+        "✅ Media Engine finished for draft #" + id + ".\\n\\n" +
+        "🖼️ " + prompts.length + " image scenes sent.\\n" +
+        "🎥 Video delivery: " + (videoSent.ok ? "✅ sent to Telegram" : "⚠️ failed") + "\\n" +
+        "🎙️ Voiceover delivery: " + (audioSent.ok ? "✅ sent to Telegram" : "⚠️ failed") + "\\n\\n" +
+        "🔐 Media URLs and API credentials are kept out of the Telegram message."
       );
     }
 
