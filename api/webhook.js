@@ -56,6 +56,27 @@ async function send(chatId, text, extra = {}) {
   return tg("sendMessage", { chat_id: chatId, text, ...extra });
 }
 
+async function sendMediaPhoto(chatId, url, caption = "") {
+  return tg("sendPhoto", { chat_id: chatId, photo: url, ...(caption ? { caption } : {}) });
+}
+
+function pollinationsUrl(kind, prompt, params = {}) {
+  const base = "https://gen.pollinations.ai/" + kind + "/" + encodeURIComponent(prompt);
+  const q = new URLSearchParams(params);
+  if (process.env.POLLINATIONS_API_KEY) q.set("key", process.env.POLLINATIONS_API_KEY);
+  return base + (q.toString() ? "?" + q.toString() : "");
+}
+
+function extractImagePrompts(content) {
+  const section = String(content || "").split("━━━━━━━━━━━━━━━━━━\\n🎬 VIDEO SHOT LIST")[0];
+  const match = section.match(/🖼️ IMAGE PROMPTS\\n\\n([\\s\\S]*?)(?:\\n\\n━━━━━━━━━━━━━━━━━━|$)/);
+  if (!match) return [];
+  return [...match[1].matchAll(/(?:^|\\n)\\s*(\\d+)\\.\\s+(.+)/g)]
+    .map(m => m[2].trim())
+    .filter(Boolean)
+    .slice(0, 7);
+}
+
 async function sendLong(chatId, text, extra = {}) {
   const limit = 3800;
   const value = String(text || "");
@@ -694,36 +715,48 @@ Published: ${counts.Published || 0}`);
     if (cmd === "/media") {
       const id = Number(rest);
       if (!Number.isInteger(id) || id <= 0) return send(chat.id, "Usage: /media <draft_id>\\nExample: /media 13");
-
       if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet.");
 
       const draft = await getDraft(chat.id, id);
       if (!draft) return send(chat.id, "❌ Draft #" + id + " was not found.");
 
-      const mediaText = [
-        "🎬 RAPSOMETTEDY MEDIA JOB #" + id,
-        "",
-        "Status: READY FOR GENERATION",
-        "",
-        "🖼️ IMAGES",
-        "Use the IMAGE PROMPTS from this draft to generate the 7 vertical 9:16 scenes.",
-        "",
-        "🎥 VIDEO",
-        "Animate the 7 scenes using the VIDEO SHOT LIST. Target about 4 seconds per scene.",
-        "",
-        "🎵 MUSIC",
-        "Use the MUSIC DIRECTION from this draft as the soundtrack brief.",
-        "",
-        "🎙️ VOICEOVER",
-        "Use the VOICEOVER section as the narration brief.",
-        "",
-        "📱 FINAL FORMAT",
-        "9:16 vertical • approximately 30 seconds • captions/subtitles recommended",
-        "",
-        "⚠️ This version creates the complete media-production job. It does not claim to generate AI media files automatically yet; that requires a connected generation service/model."
-      ].join("\\n");
+      const prompts = extractImagePrompts(draft.content);
+      if (!prompts.length) return send(chat.id, "❌ Draft #" + id + " has no image prompts.");
 
-      return sendLong(chat.id, mediaText);
+      await send(chat.id, "🎬 Starting Media Engine for draft #" + id + "...\\n\\n🖼️ Generating " + prompts.length + " vertical scenes.\\nThis uses Pollinations and may take a little while.");
+
+      for (let i = 0; i < prompts.length; i++) {
+        const url = pollinationsUrl("image", prompts[i], {
+          model: "flux",
+          width: "720",
+          height: "1280",
+          nologo: "true",
+          private: "true",
+          safe: "true"
+        });
+        const sent = await sendMediaPhoto(chat.id, url, "🎨 Rapsometeddy scene " + (i + 1) + "/" + prompts.length);
+        if (!sent.ok) {
+          await send(chat.id, "⚠️ Scene " + (i + 1) + " could not be delivered. Check the Pollinations API key/configuration.");
+        }
+      }
+
+      const videoPrompt = "cinematic vertical 9:16 short-form video for Rapsometeddy, " +
+        "AI app built using only a smartphone, planning, wireframe, coding, connecting AI, testing, debugging, finished app reveal, futuristic dark tech aesthetic, smooth camera movement, no readable text";
+      const videoUrl = pollinationsUrl("video", videoPrompt, {
+        duration: "5",
+        aspectRatio: "9:16"
+      });
+
+      const voiceText = "Can I build a useful AI app using only a phone? Day one: choose one real problem. Day two: design the smallest useful feature. Day three: build the first version. Day four: connect the AI. Day five: test it. Day six: fix what breaks. Day seven: share the result. Build, test, fix, share.";
+      const audioUrl = pollinationsUrl("audio", voiceText, { voice: "nova" });
+
+      return sendLong(chat.id,
+        "✅ Media Engine started for draft #" + id + ".\\n\\n" +
+        "🖼️ " + prompts.length + " image scenes sent above.\\n\\n" +
+        "🎥 VIDEO\\n" + videoUrl + "\\n\\n" +
+        "🎙️ VOICEOVER\\n" + audioUrl + "\\n\\n" +
+        "⚠️ Video/audio generation availability depends on the Pollinations account/model and current usage limits. Keep the API key in Vercel Environment Variables, never in GitHub."
+      );
     }
 
     if (cmd === "/auto") {
