@@ -168,11 +168,12 @@ Member:
 
 Content Machine:
 /content — Content Machine help
-/idea — generate 5 content ideas
-/ideas — same as /idea
+/idea [topic] — generate 5 fresh ideas
+/ideas [topic] — same as /idea
 /create <idea> — create a post draft
 /thread <idea> — create a thread draft
 /short <idea> — create a short-video script
+/adapt <id> <x|instagram|telegram> — make a platform version
 /drafts — list saved drafts
 /approve <id> — approve a draft
 /queue <id> — queue a draft
@@ -283,7 +284,7 @@ ${rest}`;
   if (/^\/content(?:@\w+)?\b/i.test(text)) {
     return send(chat.id, `🧸 Content Machine
 
-/idea — generate 5 ideas
+/idea [topic] — generate 5 fresh ideas
 /create <idea> — create a post draft
 /thread <idea> — create a thread draft
 /short <idea> — create a short-video script
@@ -321,27 +322,36 @@ CTA: Save this and follow Rapsometeddy for more.`,
     return typeof template === "function" ? template(idea) : templates.post(idea);
   }
 
-  const contentCmd = /^(\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
+  const contentCmd = /^(\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
   if (contentCmd) {
     const cmd = contentCmd[1].toLowerCase();
     const rest = args(text);
 
     if (cmd === "/idea" || cmd === "/ideas") {
-      return send(chat.id, `💡 Rapsometeddy content ideas
+      const topic = rest || "Rapsometeddy";
+      const pool = [
+        `A beginner's guide to ${topic}`,
+        `3 mistakes beginners make with ${topic}`,
+        `How I would start ${topic} with R0 and a phone`,
+        `What nobody tells you about ${topic}`,
+        `Free tools that make ${topic} easier`,
+        `A 7-day challenge to learn ${topic}`,
+        `Myth vs reality: ${topic}`,
+        `Can you build a real project around ${topic} using only a phone?`,
+        `What I learned building around ${topic}`,
+        `The next step after learning ${topic}`
+      ];
+      const offset = Math.floor(Date.now() / 3600000) % pool.length;
+      const ideas = Array.from({length: 5}, (_, i) => pool[(offset + i) % pool.length]);
+      return send(chat.id, `💡 5 fresh Rapsometeddy ideas about “${topic}”
 
-1. 🎵 AI + music for independent creators
-2. 🤖 5 useful AI tools for students
-3. 📱 How to build an app using only a phone
-4. 💼 Realistic online business ideas in South Africa
-5. 👨‍💻 GitHub basics for beginners
-6. 📲 How to automate a Telegram community
-7. 🚀 What I learned building Rapsometeddy HQ
-8. 🎌 Anime-inspired creativity and storytelling
+${ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n")}
 
-Pick one and run:
- /create <idea>`);
+Pick one:
+ /create <idea>
+ /thread <idea>
+ /short <idea>`);
     }
-
     if (cmd === "/create" || cmd === "/thread" || cmd === "/short") {
       if (!rest) return send(chat.id, `Usage: ${cmd} Your content idea`);
       const format = cmd === "/create" ? "post" : cmd.slice(1);
@@ -372,6 +382,46 @@ ${draftContent}
       const list = await listDrafts(chat.id, 10);
       if (!list.length) return send(chat.id, "📭 No saved drafts yet. Try /create Your idea");
       return send(chat.id, list.map(d => `#${d.id} [${d.status}] ${d.idea}`).join("\n"));
+    }
+
+    if (cmd === "/adapt") {
+      const match = rest.match(/^(\\d+)\\s+(x|instagram|telegram)\\s*$/i);
+      if (!match) return send(chat.id, "Usage: /adapt <draft id> <x|instagram|telegram>");
+      if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet.");
+      const draft = await getDraft(chat.id, Number(match[1]));
+      if (!draft) return send(chat.id, "❌ Draft not found.");
+      const platform = match[2].toLowerCase();
+      const adapted = platform === "x"
+        ? `X POST
+
+${draft.idea}
+
+One useful takeaway: start small, test quickly, and document what you learn.
+
+— Rapsometeddy`
+        : platform === "instagram"
+        ? `INSTAGRAM CAPTION
+
+${draft.idea}
+
+Build it. Learn from it. Share the process.
+
+#Rapsometeddy #BuildInPublic #Tech #AI`
+        : `TELEGRAM POST
+
+🧸 ${draft.idea}
+
+Quick takeaway: start with one small action today, then improve from there.
+
+Build • Learn • Create • Invest`;
+      const saved = await saveDraft(chat.id, user?.id, platform, `${draft.idea} [${platform}]`, adapted);
+      if (!saved) return send(chat.id, "❌ Could not save the adapted draft.");
+      return send(chat.id, `🔄 Adapted draft #${saved.id} for ${platform}.
+
+${adapted}
+
+/approve ${saved.id} → approve
+/publish ${saved.id} → publish`);
     }
 
     if (["/approve", "/queue", "/publish", "/published"].includes(cmd)) {
