@@ -56,6 +56,31 @@ async function send(chatId, text, extra = {}) {
   return tg("sendMessage", { chat_id: chatId, text, ...extra });
 }
 
+async function sendLong(chatId, text, extra = {}) {
+  const limit = 3800;
+  const value = String(text || "");
+  if (value.length <= limit) return send(chatId, value, extra);
+
+  const chunks = [];
+  let remaining = value;
+
+  while (remaining.length > limit) {
+    let cut = remaining.lastIndexOf("\n\n", limit);
+    if (cut < 1000) cut = remaining.lastIndexOf("\n", limit);
+    if (cut < 1000) cut = limit;
+    chunks.push(remaining.slice(0, cut).trim());
+    remaining = remaining.slice(cut).trim();
+  }
+  if (remaining) chunks.push(remaining);
+
+  let last = { ok: true };
+  for (const chunk of chunks) {
+    last = await send(chatId, chunk, extra);
+    if (!last.ok) return last;
+  }
+  return last;
+}
+
 async function dbRequest(path, options = {}) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -138,7 +163,7 @@ async function setDraftStatus(id, status) {
 async function publishDraft(chatId, draft) {
   const configuredChannelId = await getConfiguredChannelId();
   const destination = configuredChannelId || chatId;
-  const r = await send(destination, `🧸 Rapsometeddy HQ\n\n${draft.content}`);
+  const r = await sendLong(destination, `🧸 Rapsometeddy HQ\n\n${draft.content}`);
   if (r.ok && dbEnabled()) {
     await setDraftStatus(draft.id, "Published");
     if (draft.id) {
@@ -684,13 +709,13 @@ Published: ${counts.Published || 0}`);
       const draftContent = contentPackage(idea, archetype, topic) + "\n\n━━━━━━━━━━━━━━━━━━\n🎨 VISUAL PRODUCTION KIT\n━━━━━━━━━━━━━━━━━━\n\n" + visualPackage(topic, archetype);
 
       if (!dbEnabled()) {
-        return send(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
+        return sendLong(chat.id, `⚠️ Persistent storage isn't connected yet.\n\nIdea: ${idea}\n\n${draftContent}`);
       }
 
       const saved = await saveDraft(chat.id, user?.id, "post", idea, draftContent);
       if (!saved) return send(chat.id, "⚠️ I couldn't save the auto-generated draft.");
 
-      return send(chat.id, `🤖 Auto draft #${saved.id} created.\n\n💡 Idea: ${idea}\n\n${draftContent}\n\nStatus: Draft\n\nReview it, then use:\n/approve ${saved.id}\n/queue ${saved.id}\n/publish ${saved.id}`);
+      return sendLong(chat.id, `🤖 Auto draft #${saved.id} created.\n\n💡 Idea: ${idea}\n\n${draftContent}\n\nStatus: Draft\n\nReview it, then use:\n/approve ${saved.id}\n/queue ${saved.id}\n/publish ${saved.id}`);
     }
     if (cmd === "/idea" || cmd === "/ideas") {
       const topic = rest || "Rapsometeddy";
