@@ -392,37 +392,59 @@ Published: ${counts.Published || 0}`);
 
   function topicFacts(idea) {
     const value = idea.toLowerCase();
-    if (value.includes("mistakes")) {
-      if (value.includes("ai")) return [
+
+    if (value.includes("ai app") && (value.includes("phone") || value.includes("mobile"))) {
+      return [
+        "Trying to build the whole app at once instead of starting with one useful feature.",
+        "Choosing tools that are difficult to use on a phone instead of designing a mobile-friendly workflow.",
+        "Paying for APIs, hosting or subscriptions before proving the first version actually works."
+      ];
+    }
+
+    if (value.includes("app") && (value.includes("phone") || value.includes("mobile"))) {
+      return [
+        "Starting with a huge feature list instead of one small problem to solve.",
+        "Using a complicated development workflow that is hard to manage from a phone.",
+        "Spending money before testing whether the first version is useful."
+      ];
+    }
+
+    if (value.includes("ai")) {
+      return [
         "Trying every AI tool instead of choosing one problem to solve.",
         "Paying for tools before proving the idea works.",
-        "Generating content without checking whether it is actually useful."
+        "Trusting generated output without checking whether it is actually useful."
       ];
-      if (value.includes("phone") || value.includes("mobile")) return [
-        "Waiting for a computer instead of starting with the phone already in your hand.",
-        "Installing too many apps instead of building one simple workflow.",
-        "Trying to automate everything before the first manual version works."
-      ];
-      if (value.includes("business") || value.includes("money") || value.includes("entrepreneur")) return [
+    }
+
+    if (value.includes("business") || value.includes("money") || value.includes("entrepreneur")) {
+      return [
         "Starting with a product instead of a real problem.",
         "Spending money before testing whether anyone wants the solution.",
         "Trying to scale before finding a repeatable way to deliver value."
       ];
-      if (value.includes("music") || value.includes("song") || value.includes("rap")) return [
+    }
+
+    if (value.includes("music") || value.includes("song") || value.includes("rap")) {
+      return [
         "Focusing on tools before developing a clear creative direction.",
         "Trying to make every track perfect instead of finishing songs.",
         "Posting music without giving people a reason to remember the artist."
       ];
+    }
+
+    if (value.includes("github") || value.includes("open source") || value.includes("coding")) {
       return [
-        "Trying to learn everything before starting.",
-        "Using complicated tools when a simple solution would work.",
-        "Building without testing the idea with real people."
+        "Trying to understand the entire codebase before fixing one small problem.",
+        "Copying code without understanding what the important parts do.",
+        "Building without testing each small change before moving on."
       ];
     }
+
     return [
-      "Starting too big instead of proving the smallest useful version.",
-      "Choosing tools before clearly defining the problem.",
-      "Building in silence instead of testing and learning from feedback."
+      "Trying to learn everything before starting.",
+      "Using complicated tools when a simple solution would work.",
+      "Building without testing the idea with real people."
     ];
   }
 
