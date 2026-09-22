@@ -390,6 +390,7 @@ Member:
 /about — about HQ
 /id — show chat ID
 /bindchannel — connect the current channel as HQ
+/sports — football analytics dashboard
 
 Content Machine:
 /content — Content Machine help
@@ -840,6 +841,31 @@ Published: ${counts.Published || 0}`);
     if (format === "post") return packageText;
     if (format === "short") return "🎬 SHORT VIDEO: " + idea + "\n\nBuild a small version. Test it. Learn from what breaks. Improve the next version.\n\nCTA: Follow Rapsometeddy for the build.";
     return packageText;
+  }
+
+  if (/^\/sports(?:@\w+)?\b/i.test(text)) {
+    const sportsUrl = process.env.SPORTS_ANALYTICS_URL || "https://rapsometeddy-sports-predictor.vercel.app/api/football/analytics";
+    try {
+      const r = await fetch(sportsUrl, { headers: { accept: "application/json" } });
+      const data = await r.json().catch(() => null);
+      if (!r.ok || !data?.ok) return send(chat.id, "⚽ Sports analytics is temporarily unavailable.\\n\\n" + (data?.error || ("HTTP " + r.status)));
+      const a = data.analytics || {};
+      const pct = n => Math.round((Number(n) || 0) * 100);
+      const top = (a.topTeams || []).slice(0, 5).map((t, i) => `${i + 1}. ${t.name} — ${t.points} pts • ${t.ppg} PPG • GD ${t.goalDiff > 0 ? "+" : ""}${t.goalDiff}`).join("\\n");
+      return sendLong(chat.id, "⚽ RAPSOMETTEDY FOOTBALL ANALYTICS\\n\\n" +
+        "Finished: " + (a.finished ?? 0) + "\\n" +
+        "Upcoming: " + (a.upcoming ?? 0) + "\\n" +
+        "Goals: " + (a.goals ?? 0) + "\\n" +
+        "Average goals: " + (a.avgGoals ?? 0) + "\\n\\n" +
+        "Home wins: " + pct(a.homeWinRate) + "%\\n" +
+        "Draws: " + pct(a.drawRate) + "%\\n" +
+        "Away wins: " + pct(a.awayWinRate) + "%\\n\\n" +
+        (top ? "🏆 Table snapshot\\n" + top : "No standings snapshot available.") +
+        "\\n\\n📊 Statistical analysis only.");
+    } catch (e) {
+      console.error("[SPORTS_ANALYTICS]", e);
+      return send(chat.id, "❌ Could not reach the football analytics service.\\n\\n" + String(e?.message || e));
+    }
   }
 
   const contentCmd = /^(\/auto|\/media|\/create|\/thread|\/short|\/idea|\/ideas|\/drafts|\/adapt|\/approve|\/queue|\/publish|\/published)(?:@\w+)?\b/i.exec(text);
