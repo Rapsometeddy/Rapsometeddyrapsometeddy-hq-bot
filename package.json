@@ -1,8 +1,11 @@
 {
   "name": "rapsometeddy-hq-bot",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "vercel dev"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
   }
 }
