@@ -697,7 +697,7 @@ Published: ${counts.Published || 0}`);
 
       if (!dbEnabled()) return send(chat.id, "⚠️ Persistent storage isn't connected yet.");
 
-      const draft = await getDraft(id);
+      const draft = await getDraft(chat.id, id);
       if (!draft) return send(chat.id, "❌ Draft #" + id + " was not found.");
 
       const mediaText = [
