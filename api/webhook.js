@@ -354,12 +354,31 @@ Use /approve ${n} or /queue ${n}.`);
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") {
-    return res.status(200).send("Rapsometeddy HQ Bot is online.");
-  }
-
   if (!BOT_TOKEN) {
     return res.status(500).json({ ok: false, error: "BOT_TOKEN missing" });
+  }
+
+  // Open this endpoint once after deployment to register the Telegram webhook.
+  // The bot token stays on Vercel and is never exposed in the browser.
+  if (req.method === "GET") {
+    if (!WEBHOOK_SECRET) {
+      return res.status(500).json({ ok: false, error: "WEBHOOK_SECRET missing" });
+    }
+
+    const webhookUrl = `https://${req.headers.host}/api/webhook?token=${encodeURIComponent(WEBHOOK_SECRET)}`;
+    const r = await tg("setWebhook", {
+      url: webhookUrl,
+      allowed_updates: ["message", "channel_post"]
+    });
+
+    return res.status(r.ok ? 200 : 500).json({
+      ok: r.ok,
+      message: r.ok ? "Telegram webhook connected." : (r.description || "Could not connect webhook.")
+    });
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
   if (WEBHOOK_SECRET && req.query.token !== WEBHOOK_SECRET) {
