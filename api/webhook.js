@@ -324,6 +324,44 @@ async function publishDraft(chatId, draft) {
   return r;
 }
 
+
+
+const ecosystemApps = {
+  content: { name: "Content Machine", url: "https://rapsometeddy-content-machine-1h7xkdtmi-rapsometeddy017-9306.vercel.app", icon: "📝" },
+  studio: { name: "STUDIO R", url: "https://teddystudior-i321o159f-rapsometeddy017-9306.vercel.app", icon: "🎵" },
+  voice: { name: "Voice Studio", url: "https://rapsometeddy-voice-studio-phtij4nqx-rapsometeddy017-9306.vercel.app", icon: "🎙️" },
+  anime: { name: "Anime Studio", url: "https://rapsometeddyanimestudio-4t998um0s-rapsometeddy017-9306.vercel.app", icon: "🎬" },
+  business: { name: "Business OS", url: "https://rapsometeddy-business-qufm217oq-rapsometeddy017-9306.vercel.app", icon: "💼" },
+  profit: { name: "ProfitMate", url: "https://profitmate-pm92esi1n-rapsometeddy017-9306.vercel.app", icon: "📊" }
+};
+
+function ecosystemText() {
+  return `🧸 Rapsometeddy Ecosystem
+
+📝 Content Machine
+🎵 STUDIO R
+🎙️ Voice Studio
+🎬 Anime Studio
+💼 Business OS
+📊 ProfitMate
+
+HQ is the command layer. Use /open <app> to launch one, or /health to check the live apps.`;
+}
+
+async function ecosystemHealth() {
+  const entries = Object.entries(ecosystemApps);
+  const checks = await Promise.all(entries.map(async ([key, app]) => {
+    const started = Date.now();
+    try {
+      const r = await fetch(app.url, { method: "GET", redirect: "follow" });
+      return { key, name: app.name, ok: r.ok, status: r.status, ms: Date.now() - started };
+    } catch (e) {
+      return { key, name: app.name, ok: false, status: 0, ms: Date.now() - started, error: String(e?.message || e) };
+    }
+  }));
+  return checks;
+}
+
 const defaultRules = `🧸 Rapsometeddy HQ Community Rules
 
 1. Be respectful.
@@ -394,6 +432,28 @@ Use /help to see what the bot can do.`);
       console.error("[CONTENT_MACHINE_RENDER_REQUEST_FAILED]", e);
       return send(chat.id, "❌ Could not reach the Content Machine.\\n\\n" + String(e?.message || e));
     }
+  }
+
+
+
+  if (/^\/apps(?:@\w+)?\b/i.test(text)) {
+    return send(chat.id, ecosystemText());
+  }
+
+  if (/^\/open(?:@\w+)?\b/i.test(text)) {
+    const key = args(text).toLowerCase().split(/\s+/)[0];
+    const app = ecosystemApps[key];
+    if (!app) {
+      return send(chat.id, "Usage: /open content | studio | voice | anime | business | profit");
+    }
+    return send(chat.id, `${app.icon} ${app.name}\n${app.url}`);
+  }
+
+  if (/^\/health(?:@\w+)?\b/i.test(text)) {
+    await send(chat.id, "🔎 HQ is checking the ecosystem...");
+    const checks = await ecosystemHealth();
+    const lines = checks.map(x => `${x.ok ? "🟢" : "🔴"} ${x.name}: ${x.ok ? "online" : "unreachable"} (${x.status || "ERR"}, ${x.ms}ms)`);
+    return send(chat.id, "🧸 Ecosystem Health\n\n" + lines.join("\n") + "\n\nHQ ↔ Content Machine render is the active automation link.");
   }
 
   if (!text) return;
